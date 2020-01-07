@@ -5,15 +5,20 @@
 # Set working directory, load data and libraries
 # --------------------------------------------------------------------------
 
-#location <- "/Users/mac/cloudstor/" # if local
+# Working directory
+# location <- "/Users/mac/cloudstor/" # if local
 location <- "/share/ScratchGeneral/scoyou/" # if wolfpack
 setwd(paste0(location, "sarah_projects/SCmets_chrcha/project_results/prefiltered/"))
 
+# Libraries
 library('DropletUtils')
 library('dplyr')
 library('tidyr')
 library('scater')
-
+library('EnsDb.Hsapiens.v75')
+library('grid')
+library('ggplot2')
+library('viridis')
 
 # Load all data into single object
 # --------------------------------------------------------------------------
@@ -48,10 +53,77 @@ rowData(raw_experiment)$GeneSymbol <- as.character(gsub(".*_", "", rowData(raw_e
 rownames(raw_experiment) <- uniquifyFeatureNames(rowData(raw_experiment)$Ensembl, rowData(raw_experiment)$Symbol)
 saveRDS(raw_experiment, "Raw_experiment_all_samples_labeled.rds")
 
-# Filter cells based on mouse or human, mitochondrial counts outliers.
+# Filter genes and cells based on mouse or human, counts outliers, mitochondrial outliers.
 # --------------------------------------------------------------------------
 
+# Remove mouse cells
+stats <- perCellQCMetrics(raw_experiment, subsets=list(Human=which(Organism=="hg19")))
+raw_experiment$Human_percent <- stats$subsets_Human_percent
 
-# Filter genes based on mouse or human, counts across cells 
+pdf("Human_percent_distribution.pdf")
+plot(density(stats$subsets_Human_percent))
+dev.off()
+
+filtered_exp <- raw_experiment[,which(colData(raw_experiment)$Human_percent >= 90)]
+
+# Remove mouse genes
+filtered_exp <- filtered_exp[which(rowData(filtered_exp)$Organism == "mm10"),]
+
+# Remove genes with zero counts in all replicates
+not_zero <- rowSums(counts(filtered_exp) > 0) > 0
+filtered_exp <- filtered_exp[which(not_zero), ]
+
+# Idenitify cells to discard based on 3MAD outlier in either mito-content, number of detected genes, library size
+location <- mapIds(EnsDb.Hsapiens.v75, keys=rowData(filtered_exp)$Ensembl, column="SEQNAME", keytype="GENEID")
+stats <- perCellQCMetrics(filtered_exp, subsets=list(Mito=which(location=="MT")))
+filtered_exp$Lib_size <- stats$sum
+filtered_exp$Genes_detected <- stats$detected
+filtered_exp$Mito_percent <- stats$subsets_Mito_percent
+
+discard <- quickPerCellQC(stats, percent_subsets=c("subsets_Mito_percent"), batch=colData(filtered_exp)$Replicate)
+filtered_exp$discard <- discard$discard
+discard_stats <- DataFrame(colSums(as.matrix(discard)))
+write.csv(discard_stats, "Discard_stats.csv", row.names = FALSE)
+
+# Plot QC stats
+QC_plots <- gridExtra::grid.arrange(
+  plotColData(filtered_exp, x="Sample", y="Lib_size", colour_by="discard",
+              other_fields="Tissue") + facet_wrap(~Tissue) + 
+    scale_y_log10() + ggtitle("Total count"),
+  plotColData(filtered_exp, x="Sample", y="Genes_detected", colour_by="discard", 
+              other_fields="Tissue") + facet_wrap(~Tissue) + 
+    scale_y_log10() + ggtitle("Detected features"),
+  plotColData(filtered_exp, x="Sample", y="Mito_percent", 
+              colour_by="discard", other_fields="Tissue") + 
+    facet_wrap(~Tissue) + ggtitle("Mito percent"),
+)
+ggsave("QC_plots.pdf", QC_plots)
+
+# Remove discarded cells
+filtered_exp <- filtered_exp[ ,!which(filtered_exp$discard)]
+
+# Number of cells remaining per sample
+cells_remaining <- data.frame(table(filtered_exp$Sample))
+write.csv(discarcells_remainingd_stats, "Number_cells_remaining.csv", row.names = FALSE)
+
+# Save datasets.
 # --------------------------------------------------------------------------
+
+# Save total filtered dataset
+saveRDS(filtered_exp, "all_data/Prefiltered_experiment_All.rds")
+
+# Save grouped by tissue
+for(i in unique(colData(filtered_exp)$Tissue)) {
+saveRDS(filtered_exp[,colData(filtered_exp)$Tissue == i], paste0("by_tissue/Prefiltered_experiment_", i, ".rds"))
+}
+
+# Save grouped by replicate
+for(i in unique(colData(filtered_exp)$Replicate)) {
+  saveRDS(filtered_exp[,colData(filtered_exp)$Replicate == i], paste0("by_replicate/Prefiltered_experiment_Rep", i, ".rds"))
+}
+
+# Save individual samples
+for(i in unique(colData(filtered_exp)$Sample)) {
+  saveRDS(filtered_exp[,colData(filtered_exp)$Sample == i], paste0("individual/Prefiltered_experiment_", i, ".rds"))
+}
 
