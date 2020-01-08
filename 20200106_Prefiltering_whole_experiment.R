@@ -74,10 +74,6 @@ filtered_exp <- raw_experiment[,which(raw_experiment$Human_cells)]
 # Remove mouse genes
 filtered_exp <- filtered_exp[which(rowData(filtered_exp)$Organism == "hg19"),]
 
-# Remove genes with > zero counts in at least 3 replicates
-GT_three <- rowSums(counts(filtered_exp) > 0) > 3
-filtered_exp <- filtered_exp[which(GT_three), ]
-
 # Idenitify cells to discard based on 3MAD outlier in either mito-content, number of detected genes, library size
 location <- mapIds(EnsDb.Hsapiens.v75, keys=rowData(filtered_exp)$Ensembl, column="SEQNAME", keytype="GENEID")
 stats <- perCellQCMetrics(filtered_exp, subsets=list(Mito=which(location=="MT")))
@@ -111,6 +107,10 @@ plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", oth
 
 # Remove "discard" cells
 filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
+
+# Remove genes with > zero counts in at least 3 replicates
+GT_three <- rowSums(counts(filtered_exp) > 0) > 3
+filtered_exp <- filtered_exp[which(GT_three), ]
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
