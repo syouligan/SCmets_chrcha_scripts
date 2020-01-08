@@ -1,3 +1,5 @@
+#!/usr/bin/Rscript
+
 # --------------------------------------------------------------------------
 #! Collate all data into SingleCellExperiment object, and filter cells and genes based on available data. Mouse cells and genes are removed.
 # --------------------------------------------------------------------------
@@ -26,6 +28,7 @@ library('viridis')
 # Load all samples
 data_directory <- paste0(location, "sarah_projects/SCmets_chrcha/raw_data/data")
 raw_experiment <- read10xCounts(paste0(list.files(data_directory, full.names = TRUE), '/outs/filtered_feature_bc_matrix'), col.names = TRUE)
+saveRDS(raw_experiment, "Raw_experiment_all_samples_old_labels.rds")
 
 # Create simple informative sample ids
 old_ids <- c(paste0(list.files(data_directory, full.names = TRUE), '/outs/filtered_feature_bc_matrix'))
@@ -43,6 +46,7 @@ raw_experiment$Sample <- as.character(ids$new_ids) [idx]
 raw_experiment$Tissue <- as.character(ids$Tissue) [idx]
 raw_experiment$Met <- as.character(ids$Met) [idx]
 raw_experiment$Replicate <- as.character(ids$Replicate) [idx]
+raw_experiment$cellIDs <- rownames((colData(raw_experiment)))
 
 # Add gene labels and organism info.
 ensembl_ids <- data.frame(rowData(raw_experiment)) %>%
@@ -50,28 +54,29 @@ ensembl_ids <- data.frame(rowData(raw_experiment)) %>%
 rowData(raw_experiment)$Organism <- as.character(ensembl_ids$Organism)
 rowData(raw_experiment)$Ensembl <- as.character(ensembl_ids$Ensembl)
 rowData(raw_experiment)$GeneSymbol <- as.character(gsub(".*_", "", rowData(raw_experiment)$Symbol))
-rownames(raw_experiment) <- uniquifyFeatureNames(rowData(raw_experiment)$Ensembl, rowData(raw_experiment)$Symbol)
+rownames(raw_experiment) <- uniquifyFeatureNames(rowData(raw_experiment)$Ensembl, rowData(raw_experiment)$GeneSymbol)
 saveRDS(raw_experiment, "Raw_experiment_all_samples_labeled.rds")
 
 # Filter genes and cells based on mouse or human, counts outliers, mitochondrial outliers.
 # --------------------------------------------------------------------------
 
 # Remove mouse cells
-stats <- perCellQCMetrics(raw_experiment, subsets=list(Human=which(Organism=="hg19")))
+stats <- perCellQCMetrics(raw_experiment, subsets=list(Human=which(rowData(raw_experiment)$Organism == "hg19")))
 raw_experiment$Human_percent <- stats$subsets_Human_percent
+raw_experiment$Human_cells <- raw_experiment$Human_percent >= 99
+plotColData(raw_experiment, x="Sample", y="Human_percent", colour_by="Human_cells", other_fields="Tissue") +
+  facet_wrap(~Tissue) +
+  ggtitle("Total count") +
+  ggsave("Human_percent_distribution.pdf", useDingbats = FALSE)
 
-pdf("Human_percent_distribution.pdf")
-plot(density(stats$subsets_Human_percent))
-dev.off()
-
-filtered_exp <- raw_experiment[,which(colData(raw_experiment)$Human_percent >= 90)]
+filtered_exp <- raw_experiment[,which(raw_experiment$Human_cells)]
 
 # Remove mouse genes
-filtered_exp <- filtered_exp[which(rowData(filtered_exp)$Organism == "mm10"),]
+filtered_exp <- filtered_exp[which(rowData(filtered_exp)$Organism == "hg19"),]
 
-# Remove genes with zero counts in all replicates
-not_zero <- rowSums(counts(filtered_exp) > 0) > 0
-filtered_exp <- filtered_exp[which(not_zero), ]
+# Remove genes with > zero counts in at least 3 replicates
+GT_three <- rowSums(counts(filtered_exp) > 0) > 3
+filtered_exp <- filtered_exp[which(GT_three), ]
 
 # Idenitify cells to discard based on 3MAD outlier in either mito-content, number of detected genes, library size
 location <- mapIds(EnsDb.Hsapiens.v75, keys=rowData(filtered_exp)$Ensembl, column="SEQNAME", keytype="GENEID")
@@ -80,50 +85,62 @@ filtered_exp$Lib_size <- stats$sum
 filtered_exp$Genes_detected <- stats$detected
 filtered_exp$Mito_percent <- stats$subsets_Mito_percent
 
-discard <- quickPerCellQC(stats, percent_subsets=c("subsets_Mito_percent"), batch=colData(filtered_exp)$Replicate)
+discard <- quickPerCellQC(stats, percent_subsets=c("subsets_Mito_percent"), batch=filtered_exp$Sample)
 filtered_exp$discard <- discard$discard
 discard_stats <- DataFrame(colSums(as.matrix(discard)))
+colnames(discard_stats) <- "Cell#"
 write.csv(discard_stats, "Discard_stats.csv", row.names = FALSE)
 
 # Plot QC stats
-QC_plots <- gridExtra::grid.arrange(
-  plotColData(filtered_exp, x="Sample", y="Lib_size", colour_by="discard",
-              other_fields="Tissue") + facet_wrap(~Tissue) + 
-    scale_y_log10() + ggtitle("Total count"),
-  plotColData(filtered_exp, x="Sample", y="Genes_detected", colour_by="discard", 
-              other_fields="Tissue") + facet_wrap(~Tissue) + 
-    scale_y_log10() + ggtitle("Detected features"),
-  plotColData(filtered_exp, x="Sample", y="Mito_percent", 
-              colour_by="discard", other_fields="Tissue") + 
-    facet_wrap(~Tissue) + ggtitle("Mito percent"),
-)
-ggsave("QC_plots.pdf", QC_plots)
+plotColData(filtered_exp, x="Sample", y="Lib_size", colour_by="discard", other_fields="Tissue") +
+  facet_wrap(~Tissue) +
+  scale_y_log10() +
+  ggtitle("Total count") +
+  ggsave("Number_of_genes.pdf", useDingbats = FALSE)
+  
+plotColData(filtered_exp, x="Sample", y="Genes_detected", colour_by="discard", other_fields="Tissue") +
+  facet_wrap(~Tissue) +
+  scale_y_log10() +
+  ggtitle("Detected features") +
+  ggsave("Number_of_genes.pdf", useDingbats = FALSE)
+  
+plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", other_fields="Tissue") + 
+  facet_wrap(~Tissue) +
+  ggtitle("Mito percent") +
+  ggsave("Mito_percent.pdf", useDingbats = FALSE)
 
-# Remove discarded cells
-filtered_exp <- filtered_exp[ ,!which(filtered_exp$discard)]
+# Remove "discard" cells
+filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
-write.csv(discarcells_remainingd_stats, "Number_cells_remaining.csv", row.names = FALSE)
+write.csv(cells_remaining, "Number_cells_remaining.csv", row.names = FALSE)
+
+ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
+  geom_bar(stat="identity", color="black") +
+  ggtitle("Cells remaining") +
+  scale_color_viridis(discrete=TRUE) +
+  coord_flip() +
+  theme_minimal() +
+  ggsave("Cells_remaining.pdf", useDingbats = FALSE)
 
 # Save datasets.
 # --------------------------------------------------------------------------
 
+# Save practice dataset (10% of cells)
+filtered_exp$cellIDs <- rownames((colData(filtered_exp)))
+fe_subset <- data.frame(data.frame(colData(filtered_exp)) %>%
+                        group_by(Sample) %>%
+                        sample_frac(0.05))
+filtered_exp$Practice_subset <- is.element(rownames(colData(filtered_exp)), fe_subset$cellIDs)
+practice_exp <- filtered_exp[,which(filtered_exp$Practice_subset)]
+saveRDS(practice_exp, "practice_data/Prefiltered_experiment_Practice.rds")
+
 # Save total filtered dataset
 saveRDS(filtered_exp, "all_data/Prefiltered_experiment_All.rds")
 
-# Save grouped by tissue
-for(i in unique(colData(filtered_exp)$Tissue)) {
-saveRDS(filtered_exp[,colData(filtered_exp)$Tissue == i], paste0("by_tissue/Prefiltered_experiment_", i, ".rds"))
-}
-
-# Save grouped by replicate
-for(i in unique(colData(filtered_exp)$Replicate)) {
-  saveRDS(filtered_exp[,colData(filtered_exp)$Replicate == i], paste0("by_replicate/Prefiltered_experiment_Rep", i, ".rds"))
-}
-
 # Save individual samples
 for(i in unique(colData(filtered_exp)$Sample)) {
-  saveRDS(filtered_exp[,colData(filtered_exp)$Sample == i], paste0("individual/Prefiltered_experiment_", i, ".rds"))
+  saveRDS(filtered_exp[,filtered_exp$Sample == i], paste0("individual/Prefiltered_experiment_", i, ".rds"))
 }
 
