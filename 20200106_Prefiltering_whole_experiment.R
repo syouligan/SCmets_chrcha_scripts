@@ -108,9 +108,22 @@ plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", oth
 # Remove "discard" cells
 filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
 
-# Remove genes with > zero counts in at least 3 replicates
-GT_three <- rowSums(counts(filtered_exp) > 0) > 3
-filtered_exp <- filtered_exp[which(GT_three), ]
+# Remove genes without counts in at least 3 cells in each samples for any tissue
+GOI <- c()
+for(t in tmp_table$Tissue) {
+  tissue_exp <- filtered_exp[,filtered_exp$Tissue == t]
+  sampleGT3 <- c()
+  for(i in unique(tissue_exp$Sample)) {
+    tmp_sample <- tissue_exp[,tissue_exp$Sample == i]
+    sampleGT3 <- cbind(sampleGT3, rowSums(counts(tmp_sample) > 0) > 3) # Greater than 0 counts in at least 3 cells in sample
+  }
+  GOI <- cbind(GOI, rowSums(sampleGT3) == tmp_table[tmp_table$Tissue == t, "Reps", drop = TRUE]) # Above 3 in each replicate of each tissue type
+}
+colnames(GOI) <- paste0(tmp_table$Tissue, "_active")
+GOI <- data.frame(GOI)
+GOI$Any_Active <- rowSums(GOI) > 0 # Above three in any replicate of any tissue type
+rowData(filtered_exp) <- cbind(rowData(filtered_exp), GOI) # Add to rowData
+filtered_exp <- filtered_exp[which(GOI$Any_Active), ] # Subset to active genes
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
