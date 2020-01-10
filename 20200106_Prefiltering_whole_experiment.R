@@ -21,6 +21,7 @@ library('EnsDb.Hsapiens.v75')
 library('grid')
 library('ggplot2')
 library('viridis')
+library('Matrix')
 
 # Load all data into single object
 # --------------------------------------------------------------------------
