@@ -32,7 +32,7 @@ saveRDS(raw_experiment, "Raw_experiment_all_samples_old_labels.rds")
 
 # Create simple informative sample ids
 old_ids <- c(paste0(list.files(data_directory, full.names = TRUE), '/outs/filtered_feature_bc_matrix'))
-new_ids <- c("Liver_NA_1", "LN_NA_1", "Lung_NA_1", "Liver_NA_2", "Lung_NA_2", "Lymph_NA_2", "Liver_A_3", "Liver_B_3", "LN_A_3", "LN_B_3", "Lung_A_3", "Lung_B_3", "Liver_NA_4", "Lung_NA_4", "Lymph_NA_4", "Primary_NA_1", "Primary_NA_2", "Primary_NA_3", "Primary_NA_4")
+new_ids <- c("Liver_NA_1", "LN_NA_1", "Lung_NA_1", "Liver_NA_2", "Lung_NA_2", "LN_NA_2", "Liver_A_3", "Liver_B_3", "LN_A_3", "LN_B_3", "Lung_A_3", "Lung_B_3", "Liver_NA_4", "Lung_NA_4", "LN_NA_4", "Primary_NA_1", "Primary_NA_2", "Primary_NA_3", "Primary_NA_4")
 new_ids <- data.frame(new_ids) %>%
   separate(new_ids, c("Tissue", "Met", "Replicate"), "_", remove = FALSE)
 ids <- data.frame(cbind(old_ids, new_ids))
@@ -134,13 +134,13 @@ fe_subset <- data.frame(data.frame(colData(filtered_exp)) %>%
                         sample_frac(0.05))
 filtered_exp$Practice_subset <- is.element(rownames(colData(filtered_exp)), fe_subset$cellIDs)
 practice_exp <- filtered_exp[,which(filtered_exp$Practice_subset)]
-saveRDS(practice_exp, "practice_data/Prefiltered_experiment_Practice.rds")
+saveRDS(practice_exp, "practice_all_data/Prefiltered_experiment_Practice.rds")
 
 # Save total filtered dataset
 saveRDS(filtered_exp, "all_data/Prefiltered_experiment_All.rds")
 
 # Save individual samples
 for(i in unique(colData(filtered_exp)$Sample)) {
-  saveRDS(filtered_exp[,filtered_exp$Sample == i], paste0("individual/Prefiltered_experiment_", i, ".rds"))
+  saveRDS(filtered_exp[,filtered_exp$Sample == i], paste0("individual/", i,"/Prefiltered_experiment_", i, ".rds"))
 }
 
