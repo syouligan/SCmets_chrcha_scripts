@@ -110,6 +110,10 @@ plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", oth
 filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
 
 # Remove genes without counts in at least 3 cells in each samples for any tissue
+tmp_structure <- data.frame(unique(colData(filtered_exp)[ ,c("Tissue", "Sample")]))
+tmp_table <- data.frame(table(tmp_structure$Tissue))
+colnames(tmp_table) <- c("Tissue", "Reps")
+
 GOI <- c()
 for(t in tmp_table$Tissue) {
   tissue_exp <- filtered_exp[,filtered_exp$Tissue == t]
@@ -125,6 +129,8 @@ GOI <- data.frame(GOI)
 GOI$Any_Active <- rowSums(GOI) > 0 # Above three in any replicate of any tissue type
 rowData(filtered_exp) <- cbind(rowData(filtered_exp), GOI) # Add to rowData
 filtered_exp <- filtered_exp[which(GOI$Any_Active), ] # Subset to active genes
+
+colSums(GOI) # Number of genes "active" in each tumour location
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
