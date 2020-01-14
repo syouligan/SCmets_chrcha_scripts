@@ -25,6 +25,7 @@ library('ggplot2')
 library('readr')
 library('Rmagic')
 library('batchelor')
+library('Matrix')
 
 set.seed(100)
 # Load prefiltered SingleCellExperiment
