@@ -48,7 +48,7 @@ rowData(filtered_exp)$HVG_sig <- filtered_exp.dec$bio > 0 & filtered_exp.dec$FDR
 
 pdf("Mean_variance_model_fit_poisson_MAGIC.pdf")
 plot(filtered_exp.dec$mean, filtered_exp.dec$total, pch=16, xlab="Mean of log-expression", ylab="Variance of log-expression")
-curve(metadata(filtered_exp.dec)$trend(x), col="dodgerblue", add=TRUE)
+# curve(metadata(filtered_exp.dec)$trend(x), col="dodgerblue", add=TRUE)
 dev.off()
 
 # Run multibatch PCA and clustering without correction
