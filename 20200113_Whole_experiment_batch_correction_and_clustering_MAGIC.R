@@ -1,8 +1,7 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Normalise, batch-correct and cluster cells with MAGIC imputation
-# Need to adjust K as produces many small clusters
+#! Normalise, batch-correct and cluster cells
 # --------------------------------------------------------------------------
 
 # Working directory
@@ -35,7 +34,7 @@ if(place == "local") {
   filtered_exp <- readRDS("Prefiltered_experiment_All.rds") # uses whole dataset if wolfpack
 }
 
-# Normalised to adjust for differences between samples and perform MAGIC imputation and place results in log counts slot
+# Normalised to adjust for differences between samples
 filtered_exp <- multiBatchNorm(filtered_exp, batch = filtered_exp$Sample)
 assay(filtered_exp, "logcounts") <- Matrix(t(as.matrix(magic(t(as.matrix(assay(filtered_exp, "logcounts"))), genes = "all_genes", t = 'auto', n.jobs = 4))), sparse = TRUE)
 
@@ -52,35 +51,67 @@ plot(filtered_exp.dec$mean, filtered_exp.dec$total, pch=16, xlab="Mean of log-ex
 curve(metadata(filtered_exp.dec)$trend(x), col="dodgerblue", add=TRUE)
 dev.off()
 
-# Run PCA and clustering without correction for batch
-filtered_exp <- runPCA(filtered_exp, subset_row=HVG)
-filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
+# Run multibatch PCA and clustering without correction
+sample_details <- data.frame(unique(filtered_exp$Sample)) %>%
+  separate(1, c("Tissue", "Met", "Replicate"), "_", remove = FALSE)
+
+met_weights <- ifelse(sample_details$Met == "NA", 1, 2) # Weight PCA for the number of mets from each sample
+names(met_weights) <- unique(filtered_exp$Sample)
+met_weights
+
+multiPCA <- multiBatchPCA(filtered_exp,
+                          batch = filtered_exp$Sample,
+                          subset.row=HVG,
+                          get.all.genes = TRUE,
+                          preserve.single = TRUE,
+                          weights = 1/met_weights,
+                          get.variance = TRUE,
+                          BSPARAM=BiocSingular::IrlbaParam(deferred=TRUE)) # PCs used later for reducedMNN
+
+PCA50 <- as.matrix(data.frame((multiPCA@listData)))
+colnames(PCA50) <- paste0("PC", 1:50)
+attr(PCA50, 'percentVar') <- multiPCA@metadata$var.explained
+reducedDim(filtered_exp, "PCA") <- PCA50
+
+# filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
+
 snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA")
 clusters <- igraph::cluster_walktrap(snn.gr)$membership
 uncorrected_tab <- table(Cluster=clusters, Batch=filtered_exp$Sample)
 write.csv(uncorrected_tab, "Uncorrected_batch_cell_cluster_membership_MAGIC.csv")
 uncorrected_tab
 
-plotReducedDim(filtered_exp, dimred="PCA", size_by = "CDK1", colour_by = "Tissue", shape_by = "Replicate", text_by = clusters) +
-  ggsave("PCA_with_clusters_MAGIC.pdf")
+# Visualise uncorrected clusters using PCA, UMAP and PHATE
+filtered_exp$uncorrected_cluster <- clusters
+plotReducedDim(filtered_exp, dimred="PCA", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  ggsave("PCA_uncorrected_with_clusters_tissue_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PCA", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  ggsave("PCA_uncorrected_with_clusters_replicate_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PCA", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
+  ggsave("PCA_uncorrected_with_clusters_MAGIC.pdf")
 
 phate.tree <- phate(t(as.matrix(assay(filtered_exp, "logcounts")))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
-plotReducedDim(filtered_exp, dimred="PHATE", size_by = "CDK1", colour_by = "Tissue", shape_by = "Replicate", text_by = clusters) +
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  ggsave("PHATE_uncorrected_with_clusters_tissue_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  ggsave("PHATE_uncorrected_with_clusters_replicate_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
   ggsave("PHATE_uncorrected_with_clusters_MAGIC.pdf")
 
 # Run clustering with correction for batch
-samples.by.replicates <- lapply(split(filtered_exp$Sample, filtered_exp$Replicate), unique)
-nsamples <- rep(lengths(samples.by.replicates), lengths(samples.by.replicates))
-names(nsamples) <- unlist(samples.by.replicates)
-nsamples
+merge_order <- list(list(unique(filtered_exp$Sample)[sample_details$Tissue == "Primary"]),
+                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Liver"]),
+                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Lung"]),
+                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "LN"]))
 
 fastMNN.sce <- fastMNN(filtered_exp,
                        subset.row=HVG,
+                       cos.norm = FALSE,
                        correct.all = TRUE,
                        batch = filtered_exp$Sample,
-                       auto.merge = TRUE,
-                       weights=1/nsamples)
+                       merge.order = merge_order,
+                       weights = 1/met_weights)
 
 snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred="corrected")
 clusters <- igraph::cluster_walktrap(snn.gr)$membership
@@ -89,7 +120,6 @@ write.csv(corrected_tab, "Corrected_batch_cell_cluster_membership_MAGIC.csv")
 corrected_tab
 
 colSums(metadata(fastMNN.sce)$merge.info$lost.var)
-
 
 # Group samples based on cell composition with and without batch correction
 sample_details <- data.frame(colnames(corrected_tab)) %>%
@@ -133,15 +163,24 @@ ggplot(pc, aes(x=PC1, y=PC2, label = rownames(pc))) +
   theme_classic() +
   ggsave("Sample_clustering_after_fastmnn_cell_composition_Replicate_MAGIC.pdf", useDingbats = FALSE)
 
-# Visualise clusters using PCA, UMAP and PHATE
+# Visualise corrected clusters using PCA, UMAP and PHATE
 filtered_exp$cluster <- clusters
 reducedDim(filtered_exp, "corrected_fastMNN") <- reducedDim(fastMNN.sce, "corrected")
 assay(filtered_exp, "reconstructed_fastMNN") <- assay(fastMNN.sce, "reconstructed")
 
-plotReducedDim(filtered_exp, dimred="corrected_fastMNN", size_by = "CDK1", colour_by = "Tissue", shape_by = "Replicate", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  ggsave("Fastmnn_corrected_with_clusters_tissue_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  ggsave("Fastmnn_corrected_with_clusters_replicate_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
   ggsave("Fastmnn_corrected_with_clusters_MAGIC.pdf")
 
+
 phate.tree <- phate(t(as.matrix(assay(filtered_exp, "reconstructed_fastMNN")))) # Runs PHATE diffusion map
-reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
-plotReducedDim(filtered_exp, dimred="PHATE", size_by = "CDK1", colour_by = "Tissue", shape_by = "Replicate", text_by = "cluster") +
+reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.tree$embedding
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  ggsave("PHATE_corrected_with_clusters_tissue_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  ggsave("PHATE_corrected_with_clusters_replicate_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text_by = "cluster") +
   ggsave("PHATE_corrected_with_clusters_MAGIC.pdf")
