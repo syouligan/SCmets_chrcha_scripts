@@ -1,12 +1,15 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Normalise, cluster and characterise each individual sample
+#! Normalise and cluster individual samples
 # --------------------------------------------------------------------------
 
 # Working directory
-location <- "/Users/mac/cloudstor/" # if local
-# location <- "/share/ScratchGeneral/scoyou/" # if wolfpack
+if(dir.exists("/Users/mac/cloudstor/")) {
+  location <- "/Users/mac/cloudstor/"
+} else {
+  location <- "/share/ScratchGeneral/scoyou/"
+}
 setwd(paste0(location, "sarah_projects/SCmets_chrcha/project_results/prefiltered/individual"))
 
 # Libraries

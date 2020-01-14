@@ -8,8 +8,12 @@
 # --------------------------------------------------------------------------
 
 # Working directory
-# location <- "/Users/mac/cloudstor/" # if local
-location <- "/share/ScratchGeneral/scoyou/" # if wolfpack
+if(dir.exists("/Users/mac/cloudstor/")) {
+  location <- "/Users/mac/cloudstor/"
+} else {
+  location <- "/share/ScratchGeneral/scoyou/"
+}
+
 setwd(paste0(location, "sarah_projects/SCmets_chrcha/project_results/prefiltered/"))
 
 # Libraries
@@ -147,7 +151,7 @@ ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
 # Save datasets.
 # --------------------------------------------------------------------------
 
-# Save practice dataset (10% of cells)
+# Save practice dataset (5% of cells from each sample)
 filtered_exp$cellIDs <- rownames((colData(filtered_exp)))
 fe_subset <- data.frame(data.frame(colData(filtered_exp)) %>%
                         group_by(Sample) %>%
