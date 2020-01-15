@@ -24,6 +24,7 @@ library('scater')
 library('EnsDb.Hsapiens.v75')
 library('grid')
 library('ggplot2')
+library('ggridges')
 library('viridis')
 library('Matrix')
 
@@ -93,22 +94,37 @@ colnames(discard_stats) <- "Cell#"
 write.csv(discard_stats, "Discard_stats.csv", row.names = FALSE)
 
 # Plot QC stats
+ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  theme_minimal() +
+  ggsave("Library_size_ridge.pdf", useDingbats = FALSE)
+
 plotColData(filtered_exp, x="Sample", y="Lib_size", colour_by="discard", other_fields="Tissue") +
   facet_wrap(~Tissue) +
   scale_y_log10() +
   ggtitle("Total count") +
-  ggsave("Number_of_genes.pdf", useDingbats = FALSE)
+  ggsave("Library_size_violin.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(filtered_exp)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  theme_minimal() +
+  ggsave("Number_of_genes_ridge.pdf", useDingbats = FALSE)
   
 plotColData(filtered_exp, x="Sample", y="Genes_detected", colour_by="discard", other_fields="Tissue") +
   facet_wrap(~Tissue) +
   scale_y_log10() +
   ggtitle("Detected features") +
-  ggsave("Number_of_genes.pdf", useDingbats = FALSE)
+  ggsave("Number_of_genes_violin.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(filtered_exp)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  theme_minimal() +
+  ggsave("Mito_percent_ridge.pdf", useDingbats = FALSE)
   
 plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", other_fields="Tissue") + 
   facet_wrap(~Tissue) +
   ggtitle("Mito percent") +
-  ggsave("Mito_percent.pdf", useDingbats = FALSE)
+  ggsave("Mito_percent_violin.pdf", useDingbats = FALSE)
 
 # Remove "discard" cells
 filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
