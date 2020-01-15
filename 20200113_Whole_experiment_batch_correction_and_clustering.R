@@ -182,13 +182,13 @@ plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate"
 plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
   ggsave("Fastmnn_corrected_with_clusters.pdf")
 
-# filtered_exp <- runUMAP(filtered_exp, dimred="corrected_fastMNN")
-# plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
-#   ggsave("UMAP_corrected_with_clusters_tissue.pdf")
-# plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
-#   ggsave("UMAP_corrected_with_clusters_replicate.pdf")
-# plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
-#   ggsave("UMAP_corrected_with_clusters.pdf")
+filtered_exp <- runUMAP(filtered_exp, dimred="corrected_fastMNN")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  ggsave("UMAP_corrected_with_clusters_tissue.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  ggsave("UMAP_corrected_with_clusters_replicate.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
+  ggsave("UMAP_corrected_with_clusters.pdf")
 
 # phate.tree <- phate(t(as.matrix(assay(filtered_exp, "reconstructed_fastMNN")))) # Runs PHATE diffusion map
 # reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.tree$embedding
