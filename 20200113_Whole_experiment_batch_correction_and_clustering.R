@@ -94,7 +94,7 @@ plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "unc
   ggsave("UMAP_uncorrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters_replicate.pdf")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "cluster", text_by = "uncorrected_cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters.pdf")
 
 phate.tree <- phate(t(as.matrix(assay(filtered_exp, "logcounts")))) # Runs PHATE diffusion map
