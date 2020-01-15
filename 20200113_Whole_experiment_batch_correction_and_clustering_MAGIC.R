@@ -92,12 +92,12 @@ plotReducedDim(filtered_exp, dimred="PCA", colour_by = "uncorrected_cluster", te
   ggsave("PCA_uncorrected_with_clusters_MAGIC.pdf")
 
 filtered_exp <- runUMAP(filtered_exp, dimred="PCA")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "cluster") +
-  ggsave("UMAP_uncorrected_with_clusters_tissue_MAGIC.pdf")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "cluster") +
-  ggsave("UMAP_uncorrected_with_clusters_replicate_MAGIC.pdf")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "cluster", text_by = "cluster") +
-  ggsave("UMAP_uncorrected_with_clusters_MAGIC.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  ggsave("UMAP_uncorrected_with_clusters_tissue.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  ggsave("UMAP_uncorrected_with_clusters_replicate.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "cluster", text_by = "uncorrected_cluster") +
+  ggsave("UMAP_uncorrected_with_clusters.pdf")
 
 phate.tree <- phate(t(as.matrix(assay(filtered_exp, "logcounts")))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
@@ -108,11 +108,11 @@ plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Replicate", text_by = 
 plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
   ggsave("PHATE_uncorrected_with_clusters_MAGIC.pdf")
 
-# Run clustering with correction for batch
-merge_order <- list(list(unique(filtered_exp$Sample)[sample_details$Tissue == "Primary"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Liver"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Lung"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "LN"]))
+# Run clustering with correction for batch (merged by tissue type first, within each tissue type progressive by decreasing size)
+merge_order <- list(list(c("LN_B_3", "LN_A_3", "LN_NA_4", "LN_NA_2", "LN_NA_1")),
+                    list(c("Liver_A_3", "Liver_B_3", "Liver_NA_2", "Liver_NA_4", "Liver_NA_1")),
+                    list(c("Primary_NA_4", "Primary_NA_3", "Primary_NA_1", "Primary_NA_2")),
+                    list(c("Lung_A_3", "Lung_B_3", "Lung_NA_4", "Lung_NA_1", "Lung_NA_2")))
 
 fastMNN.sce <- fastMNN(filtered_exp,
                        subset.row=HVG,
@@ -128,6 +128,7 @@ corrected_tab <- table(Cluster=clusters, Batch=fastMNN.sce$batch)
 write.csv(corrected_tab, "Corrected_batch_cell_cluster_membership_MAGIC.csv")
 corrected_tab
 
+metadata(fastMNN.sce)$merge.info$lost.var
 colSums(metadata(fastMNN.sce)$merge.info$lost.var)
 
 # Group samples based on cell composition with and without batch correction
@@ -202,5 +203,9 @@ plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text
   ggsave("PHATE_corrected_with_clusters_MAGIC.pdf")
 
 # Save total filtered dataset
-saveRDS(filtered_exp, "Prefiltered_experiment_All_merge_cluster_MAGIC.rds")
+if(place == "local") {
+  saveRDS(filtered_exp, "Prefiltered_experiment_Practice_merge_cluster.rds")
+} else {
+  saveRDS(filtered_exp, "Prefiltered_experiment_All_merge_cluster.rds")
+}
 
