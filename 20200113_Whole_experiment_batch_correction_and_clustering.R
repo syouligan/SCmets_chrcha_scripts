@@ -90,11 +90,11 @@ plotReducedDim(filtered_exp, dimred="PCA", colour_by = "uncorrected_cluster", te
   ggsave("PCA_uncorrected_with_clusters.pdf")
 
 filtered_exp <- runUMAP(filtered_exp, dimred="PCA")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters_tissue.pdf")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters_replicate.pdf")
-plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "cluster", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "cluster", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters.pdf")
 
 phate.tree <- phate(t(as.matrix(assay(filtered_exp, "logcounts")))) # Runs PHATE diffusion map
@@ -107,10 +107,10 @@ plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", 
   ggsave("PHATE_uncorrected_with_clusters.pdf")
 
 # Run clustering with correction for batch
-merge_order <- list(list(unique(filtered_exp$Sample)[sample_details$Tissue == "Primary"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Liver"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "Lung"]),
-                    list(unique(filtered_exp$Sample)[sample_details$Tissue == "LN"]))
+merge_order <- list(list(c("LN_B_3", "LN_A_3", "LN_NA_4", "LN_NA_2", "LN_NA_1")),
+                    list(c("Liver_A_3", "Liver_B_3", "Liver_NA_2", "Liver_NA_4", "Liver_NA_1")),
+                    list(c("Primary_NA_4", "Primary_NA_3", "Primary_NA_1", "Primary_NA_2")),
+                    list(c("Lung_A_3", "Lung_B_3", "Lung_NA_4", "Lung_NA_1", "Lung_NA_2")))
 
 fastMNN.sce <- fastMNN(filtered_exp,
                        subset.row=HVG,
@@ -200,6 +200,8 @@ plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text
   ggsave("PHATE_corrected_with_clusters.pdf")
 
 # Save total filtered dataset
-saveRDS(filtered_exp, "Prefiltered_experiment_All_merge_cluster.rds")
-
-
+if(place == "local") {
+  saveRDS(filtered_exp, "Prefiltered_experiment_Practice_merge_cluster.rds")
+} else {
+  saveRDS(filtered_exp, "Prefiltered_experiment_All_merge_cluster.rds")
+}
