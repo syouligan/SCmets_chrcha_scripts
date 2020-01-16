@@ -25,6 +25,7 @@ library('ggplot2')
 library('readr')
 library('Rmagic')
 library('batchelor')
+library('Matrix')
 
 set.seed(100)
 # Load prefiltered SingleCellExperiment
@@ -74,7 +75,7 @@ reducedDim(filtered_exp, "PCA") <- PCA50
 
 # filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
 
-snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA")
+snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20)
 clusters <- igraph::cluster_walktrap(snn.gr)$membership
 uncorrected_tab <- table(Cluster=clusters, Batch=filtered_exp$Sample)
 write.csv(uncorrected_tab, "Uncorrected_batch_cell_cluster_membership.csv")
@@ -97,14 +98,14 @@ plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "
 plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
   ggsave("UMAP_uncorrected_with_clusters.pdf")
 
-# phate.tree <- phate(t(as.matrix(assay(filtered_exp, "logcounts")))) # Runs PHATE diffusion map
-# reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
-# plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Tissue", text_by = "uncorrected_cluster") +
-#   ggsave("PHATE_uncorrected_with_clusters_tissue.pdf")
-# plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Replicate", text_by = "uncorrected_cluster") +
-#   ggsave("PHATE_uncorrected_with_clusters_replicate.pdf")
-# plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
-#   ggsave("PHATE_uncorrected_with_clusters.pdf")
+phate.tree <- phate(Matrix::t(assay(filtered_exp, "logcounts"))) # Runs PHATE diffusion map
+reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  ggsave("PHATE_uncorrected_with_clusters_tissue.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  ggsave("PHATE_uncorrected_with_clusters_replicate.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
+  ggsave("PHATE_uncorrected_with_clusters.pdf")
 
 # Run clustering with correction for batch
 merge_order <- list(list(c("LN_B_3", "LN_A_3", "LN_NA_4", "LN_NA_2", "LN_NA_1")),
@@ -115,12 +116,13 @@ merge_order <- list(list(c("LN_B_3", "LN_A_3", "LN_NA_4", "LN_NA_2", "LN_NA_1"))
 fastMNN.sce <- fastMNN(filtered_exp,
                        subset.row=HVG,
                        cos.norm = FALSE,
+                       k=20,
                        correct.all = TRUE,
                        batch = filtered_exp$Sample,
                        merge.order = merge_order,
                        weights = 1/met_weights)
 
-snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred="corrected")
+snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20)
 clusters <- igraph::cluster_walktrap(snn.gr)$membership
 corrected_tab <- table(Cluster=clusters, Batch=fastMNN.sce$batch)
 write.csv(corrected_tab, "Corrected_batch_cell_cluster_membership.csv")
@@ -132,38 +134,39 @@ colSums(metadata(fastMNN.sce)$merge.info$lost.var)
 sample_details <- data.frame(colnames(corrected_tab)) %>%
   separate(1, c("Tissue", "Met", "Replicate"), "_", remove = FALSE)
 
-pc <- data.frame(prcomp(as.matrix(uncorrected_tab/colSums(uncorrected_tab)), scale. = TRUE)$rotation)
-rownames(pc) <- colnames(uncorrected_tab)
-pc$Tissue <- sample_details$Tissue
-pc$Replicate <- sample_details$Replicate
+pc <- prcomp(t(as.matrix(uncorrected_tab/colSums(uncorrected_tab))), scale = TRUE)
+coords <- data.frame(pc$x)
+rownames(coords) <- colnames(uncorrected_tab)
+coords$Tissue <- sample_details$Tissue
+coords$Replicate <- sample_details$Replicate
 
-ggplot(pc, aes(x=PC1, y=PC2, label = rownames(pc))) +
+ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
   stat_ellipse(aes(fill = Tissue), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
   geom_point(aes(color = Tissue)) +
   geom_text(aes(color = Tissue)) +
   theme_classic() +
   ggsave("Sample_clustering_before_fastmnn_cell_composition_Tissue.pdf", useDingbats = FALSE)
 
-ggplot(pc, aes(x=PC1, y=PC2, label = rownames(pc))) +
+ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
   stat_ellipse(aes(fill = Replicate), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
   geom_point(aes(color = Replicate)) +
   geom_text(aes(color = Replicate)) +
   theme_classic() +
   ggsave("Sample_clustering_before_fastmnn_cell_composition_Replicate.pdf", useDingbats = FALSE)
 
-pc <- data.frame(prcomp(as.matrix(corrected_tab/colSums(corrected_tab)), scale. = TRUE)$rotation)
-rownames(pc) <- colnames(corrected_tab)
-pc$Tissue <- sample_details$Tissue
-pc$Replicate <- sample_details$Replicate
+pc <- prcomp(t(as.matrix(corrected_tab/colSums(corrected_tab))), scale = TRUE)
+coords <- data.frame(pc$x)
+coords$Tissue <- sample_details$Tissue
+coords$Replicate <- sample_details$Replicate
 
-ggplot(pc, aes(x=PC1, y=PC2, label = rownames(pc))) +
+ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
   stat_ellipse(aes(fill = Tissue), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
   geom_point(aes(color = Tissue)) +
   geom_text(aes(color = Tissue)) +
   theme_classic() +
   ggsave("Sample_clustering_after_fastmnn_cell_composition_Tissue.pdf", useDingbats = FALSE)
 
-ggplot(pc, aes(x=PC1, y=PC2, label = rownames(pc))) +
+ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
   stat_ellipse(aes(fill = Replicate), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
   geom_point(aes(color = Replicate)) +
   geom_text(aes(color = Replicate)) +
@@ -190,14 +193,14 @@ plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate"
 plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
   ggsave("UMAP_corrected_with_clusters.pdf")
 
-# phate.tree <- phate(t(as.matrix(assay(filtered_exp, "reconstructed_fastMNN")))) # Runs PHATE diffusion map
-# reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.tree$embedding
-# plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Tissue", text_by = "cluster") +
-#   ggsave("PHATE_corrected_with_clusters_tissue.pdf")
-# plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Replicate", text_by = "cluster") +
-#   ggsave("PHATE_corrected_with_clusters_replicate.pdf")
-# plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text_by = "cluster") +
-#   ggsave("PHATE_corrected_with_clusters.pdf")
+phate.out <- phate(Matrix::t(assay(filtered_exp, "reconstructed_fastMNN"))) # Runs PHATE diffusion map
+reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.out$embedding
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  ggsave("PHATE_corrected_with_clusters_tissue.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  ggsave("PHATE_corrected_with_clusters_replicate.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text_by = "cluster") +
+  ggsave("PHATE_corrected_with_clusters.pdf")
 
 # Save total filtered dataset
 if(place == "local") {
