@@ -53,18 +53,13 @@ dev.off()
 
 # Run multibatch PCA and clustering without correction
 sample_details <- data.frame(unique(filtered_exp$Sample)) %>%
-  separate(1, c("Tissue", "Met", "Replicate"), "_", remove = FALSE)
-
-met_weights <- ifelse(sample_details$Met == "NA", 1, 2) # Weight PCA for the number of mets from each sample
-names(met_weights) <- unique(filtered_exp$Sample)
-met_weights
+  separate(1, c("Tissue", "Replicate"), "_", remove = FALSE)
 
 multiPCA <- multiBatchPCA(filtered_exp,
                               batch = filtered_exp$Sample,
                               subset.row=HVG,
                               get.all.genes = TRUE,
                               preserve.single = TRUE,
-                              weights = 1/met_weights,
                               get.variance = TRUE,
                               BSPARAM=BiocSingular::IrlbaParam(deferred=TRUE)) # PCs used later for reducedMNN
 
@@ -108,10 +103,10 @@ plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", 
   ggsave("PHATE_uncorrected_with_clusters.pdf")
 
 # Run clustering with correction for batch
-merge_order <- list(list(c("LN_B_3", "LN_A_3", "LN_NA_4", "LN_NA_2", "LN_NA_1")),
-                    list(c("Liver_A_3", "Liver_B_3", "Liver_NA_2", "Liver_NA_4", "Liver_NA_1")),
-                    list(c("Primary_NA_4", "Primary_NA_3", "Primary_NA_1", "Primary_NA_2")),
-                    list(c("Lung_A_3", "Lung_B_3", "Lung_NA_4", "Lung_NA_1", "Lung_NA_2")))
+merge_order <- list(list(c("LN_3", "LN_4", "LN_2", "LN_1")),
+                    list(c("Primary_4", "Primary_3", "Primary_1", "Primary_2")),
+                    list(c("Liver_3", "Liver_2", "Liver_4", "Liver_1")),
+                    list(c("Lung_3", "Lung_4", "Lung_1", "Lung_2")))
 
 fastMNN.sce <- fastMNN(filtered_exp,
                        subset.row=HVG,
@@ -119,8 +114,7 @@ fastMNN.sce <- fastMNN(filtered_exp,
                        k=20,
                        correct.all = TRUE,
                        batch = filtered_exp$Sample,
-                       merge.order = merge_order,
-                       weights = 1/met_weights)
+                       merge.order = merge_order)
 
 snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20)
 clusters <- igraph::cluster_walktrap(snn.gr)$membership
@@ -132,7 +126,7 @@ colSums(metadata(fastMNN.sce)$merge.info$lost.var)
 
 # Group samples based on cell composition with and without batch correction
 sample_details <- data.frame(colnames(corrected_tab)) %>%
-  separate(1, c("Tissue", "Met", "Replicate"), "_", remove = FALSE)
+  separate(1, c("Tissue", "Replicate"), "_", remove = FALSE)
 
 pc <- prcomp(t(as.matrix(uncorrected_tab/colSums(uncorrected_tab))), scale = TRUE)
 coords <- data.frame(pc$x)

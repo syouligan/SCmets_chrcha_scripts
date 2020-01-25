@@ -92,14 +92,19 @@ plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Tissue", text_
 plotting <- data.frame(reducedDim(filtered_exp, "PHATE_fastMNN"))
 plotting$Tissue <- filtered_exp$Tissue
 plotting$Mito_percent <- filtered_exp$Mito_percent
+text_out <- retrieveCellInfo(filtered_exp, "cluster", search="colData")
+text_out$val <- as.factor(text_out$val)
+by_text_x <- vapply(split(plotting$PHATE1, text_out$val), median, FUN.VALUE=0)
+by_text_y <- vapply(split(plotting$PHATE2, text_out$val), median, FUN.VALUE=0)
 
 for(i in as.character(unique(filtered_exp$Tissue))) {
   plotting_t <- plotting[plotting$Tissue == i, ]
   ggplot() +
     geom_point(data = plotting, aes(x = PHATE1, y = PHATE2), color = "grey80") +
-    geom_point(data = plotting_t, aes(x = PHATE1, y = PHATE2), color = color[[i]]) +
+    geom_point(data = plotting_t, aes(x = PHATE1, y = PHATE2), color = color[[i]], alpha = 0.5) +
     theme(aspect.ratio = 1) +
     theme_classic() +
+    annotate("text", x = by_text_x, y = by_text_y, label = names(by_text_x))
     ggsave(paste0("All_cells_",i ,".pdf"), useDingbats = FALSE)
 }
 
