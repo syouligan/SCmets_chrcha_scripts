@@ -77,29 +77,38 @@ write.csv(uncorrected_tab, "Uncorrected_batch_cell_cluster_membership.csv")
 uncorrected_tab
 
 # Visualise uncorrected clusters using PCA, UMAP and PHATE
-filtered_exp$uncorrected_cluster <- clusters
+filtered_exp$uncorrected_cluster <- factor(clusters)
 plotReducedDim(filtered_exp, dimred="PCA", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PCA_uncorrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="PCA", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PCA_uncorrected_with_clusters_replicate.pdf")
 plotReducedDim(filtered_exp, dimred="PCA", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PCA_uncorrected_with_clusters.pdf")
 
 filtered_exp <- runUMAP(filtered_exp, dimred="PCA")
 plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_uncorrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_uncorrected_with_clusters_replicate.pdf")
 plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_uncorrected_with_clusters.pdf")
 
 phate.tree <- phate(Matrix::t(assay(filtered_exp, "logcounts"))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
 plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Tissue", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_uncorrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Replicate", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_uncorrected_with_clusters_replicate.pdf")
 plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "uncorrected_cluster", text_by = "uncorrected_cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_uncorrected_with_clusters.pdf")
 
 # Run clustering with correction for batch
@@ -168,32 +177,68 @@ ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
   ggsave("Sample_clustering_after_fastmnn_cell_composition_Replicate.pdf", useDingbats = FALSE)
 
 # Visualise corrected clusters using PCA, UMAP and PHATE
-filtered_exp$cluster <- clusters
+filtered_exp$cluster <- factor(clusters)
 reducedDim(filtered_exp, "corrected_fastMNN") <- reducedDim(fastMNN.sce, "corrected")
 assay(filtered_exp, "reconstructed_fastMNN") <- assay(fastMNN.sce, "reconstructed")
 
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("Fastmnn_corrected_with_clusters_Mito.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Genes_detected", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("Fastmnn_corrected_with_clusters_NGenes.pdf")
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Lib_size", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("Fastmnn_corrected_with_clusters_Lib_size.pdf")
 plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_replicate.pdf")
 plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters.pdf")
 
-filtered_exp <- runUMAP(filtered_exp, dimred="corrected_fastMNN")
-plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+filtered_exp <- runUMAP(filtered_exp, dimred="corrected_fastMNN", name = "UMAP_fastMNN")
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("UMAP_corrected_with_clusters_Mito.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Genes_detected", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("UMAP_corrected_with_clusters_NGenes.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Lib_size", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("UMAP_corrected_with_clusters_Lib_size.pdf")
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_corrected_with_clusters_tissue.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_corrected_with_clusters_replicate.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "cluster", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_corrected_with_clusters.pdf")
 
 phate.out <- phate(Matrix::t(assay(filtered_exp, "reconstructed_fastMNN"))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.out$embedding
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("PHATE_corrected_with_clusters_Mito.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Genes_detected", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("PHATE_corrected_with_clusters_NGenes.pdf")
+plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Lib_size", text_by = "cluster") +
+  scale_fill_viridis_c(option = "B") +
+  ggsave("PHATE_corrected_with_clusters_Lib_size.pdf")
 plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Tissue", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_corrected_with_clusters_tissue.pdf")
 plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Replicate", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_corrected_with_clusters_replicate.pdf")
 plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "cluster", text_by = "cluster") +
+  scale_fill_viridis_d(option = "B") +
   ggsave("PHATE_corrected_with_clusters.pdf")
 
 # Save total filtered dataset
