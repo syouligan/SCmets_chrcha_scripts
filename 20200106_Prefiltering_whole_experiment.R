@@ -10,8 +10,10 @@
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
   location <- "/Users/mac/cloudstor/"
+  place <- "local"
 } else {
   location <- "/share/ScratchGeneral/scoyou/"
+  place <- "wolfpack"
 }
 
 setwd(paste0(location, "sarah_projects/SCmets_chrcha/project_results/prefiltered/"))
@@ -30,6 +32,12 @@ library('Matrix')
 
 # Load all data into single object
 # --------------------------------------------------------------------------
+
+if (place == "local") {
+  
+  raw_experiment <- readRDS("practice_all_data/Raw_experiment_Practice.rds") # Load practice dataset generated after the following steps
+
+  } else {
 
 # Load all samples
 data_directory <- paste0(location, "sarah_projects/SCmets_chrcha/raw_data/data")
@@ -62,6 +70,7 @@ rowData(raw_experiment)$Ensembl <- as.character(ensembl_ids$Ensembl)
 rowData(raw_experiment)$GeneSymbol <- as.character(gsub(".*_", "", rowData(raw_experiment)$Symbol))
 rownames(raw_experiment) <- uniquifyFeatureNames(rowData(raw_experiment)$Ensembl, rowData(raw_experiment)$GeneSymbol)
 saveRDS(raw_experiment, "Raw_experiment_all_samples_labeled.rds")
+}
 
 # Filter genes and cells based on mouse or human, counts outliers, mitochondrial outliers.
 # --------------------------------------------------------------------------
@@ -80,20 +89,20 @@ filtered_exp <- raw_experiment[,which(raw_experiment$Human_cells)]
 # Remove mouse genes
 filtered_exp <- filtered_exp[which(rowData(filtered_exp)$Organism == "hg19"),]
 
-# Idenitify cells to discard based on 3MAD outlier in either mito-content, number of detected genes, library size
+# Idenitify cells to discard based on 3MAD outlier in either number of detected genes, library size or >20% mitochondrial content
 location <- mapIds(EnsDb.Hsapiens.v75, keys=rowData(filtered_exp)$Ensembl, column="SEQNAME", keytype="GENEID")
 stats <- perCellQCMetrics(filtered_exp, subsets=list(Mito=which(location=="MT")))
 filtered_exp$Lib_size <- stats$sum
 filtered_exp$Genes_detected <- stats$detected
 filtered_exp$Mito_percent <- stats$subsets_Mito_percent
 
-discard <- quickPerCellQC(stats, percent_subsets=c("subsets_Mito_percent"), batch=filtered_exp$Sample)
+discard <- quickPerCellQC(stats, batch=filtered_exp$Sample)
 filtered_exp$discard_LibGenes <- discard$low_lib_size | discard$low_n_features
-filtered_exp$discard_Mito <- discard$high_subsets_Mito_percent
-filtered_exp$discard <- discard$discard
-discard_stats <- DataFrame(colSums(as.matrix(discard)))
-colnames(discard_stats) <- "Cell#"
-write.csv(discard_stats, "Discard_stats.csv", row.names = FALSE)
+filtered_exp$discard_Mito <- filtered_exp$Mito_percent > 20
+filtered_exp$discard <- filtered_exp$discard_LibGenes | filtered_exp$discard_Mito
+sum(discard$low_lib_size)
+sum(discard$low_n_features)
+sum(discard$discard_Mito)
 
 # Plot QC stats
 ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
@@ -101,33 +110,16 @@ ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = T
   theme_minimal() +
   ggsave("Library_size_ridge.pdf", useDingbats = FALSE)
 
-plotColData(filtered_exp, x="Sample", y="Lib_size", colour_by="discard", other_fields="Tissue") +
-  facet_wrap(~Tissue) +
-  scale_y_log10() +
-  ggtitle("Total count") +
-  ggsave("Library_size_violin.pdf", useDingbats = FALSE)
-
 ggplot(data.frame(colData(filtered_exp)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Number_of_genes_ridge.pdf", useDingbats = FALSE)
   
-plotColData(filtered_exp, x="Sample", y="Genes_detected", colour_by="discard", other_fields="Tissue") +
-  facet_wrap(~Tissue) +
-  scale_y_log10() +
-  ggtitle("Detected features") +
-  ggsave("Number_of_genes_violin.pdf", useDingbats = FALSE)
-
 ggplot(data.frame(colData(filtered_exp)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Mito_percent_ridge.pdf", useDingbats = FALSE)
   
-plotColData(filtered_exp, x="Sample", y="Mito_percent", colour_by="discard", other_fields="Tissue") + 
-  facet_wrap(~Tissue) +
-  ggtitle("Mito percent") +
-  ggsave("Mito_percent_violin.pdf", useDingbats = FALSE)
-
 # Remove "discard" cells
 filtered_exp <- filtered_exp[ ,which(!filtered_exp$discard)]
 
@@ -156,7 +148,7 @@ colSums(GOI) # Number of genes "active" in each tumour location
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
-write.csv(cells_remaining, "Number_cells_remaining.csv", row.names = FALSE)
+write.csv(cells_remaining, "Cells_remaining_number.csv", row.names = FALSE)
 
 ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   geom_bar(stat="identity", color="black") +
@@ -164,7 +156,7 @@ ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   scale_color_viridis(discrete=TRUE) +
   coord_flip() +
   theme_classic() +
-  ggsave("Cells_remaining.pdf", useDingbats = FALSE)
+  ggsave("Cells_remaining_barplot.pdf", useDingbats = FALSE)
 
 # Save datasets.
 # --------------------------------------------------------------------------
@@ -176,7 +168,12 @@ fe_subset <- data.frame(data.frame(colData(filtered_exp)) %>%
                         sample_frac(0.05))
 filtered_exp$Practice_subset <- is.element(rownames(colData(filtered_exp)), fe_subset$cellIDs)
 practice_exp <- filtered_exp[,which(filtered_exp$Practice_subset)]
+
+if (place == "wolfpack") {
 saveRDS(practice_exp, "practice_all_data/Prefiltered_experiment_Practice.rds")
+  } else {
+  print("Working local")
+    }
 
 raw_experiment$cellIDs <- rownames((colData(raw_experiment)))
 fe_subset <- data.frame(data.frame(colData(raw_experiment)) %>%
@@ -184,14 +181,25 @@ fe_subset <- data.frame(data.frame(colData(raw_experiment)) %>%
                           sample_frac(0.05))
 raw_experiment$Practice_subset <- is.element(rownames(colData(raw_experiment)), fe_subset$cellIDs)
 practice_exp <- raw_experiment[,which(raw_experiment$Practice_subset)]
+if (place == "wolfpack") {
 saveRDS(practice_exp, "practice_all_data/Raw_experiment_Practice.rds")
-
+  } else {
+  print("Working local")
+    }
 
 # Save total filtered dataset
-saveRDS(filtered_exp, "all_data/Prefiltered_experiment_All.rds")
+if (place == "wolfpack") {
+  saveRDS(filtered_exp, "all_data/Prefiltered_experiment_All.rds")
+  } else {
+  print("Working local")
+    }
 
 # Save individual samples
-for(i in unique(colData(filtered_exp)$Sample)) {
+if (place == "wolfpack") {
+  for(i in unique(colData(filtered_exp)$Sample)) {
+    dir.create(paste0("individual/", i))
   saveRDS(filtered_exp[,filtered_exp$Sample == i], paste0("individual/", i,"/Prefiltered_experiment_", i, ".rds"))
-}
-
+    }
+  } else {
+  print("Working local")
+    }
