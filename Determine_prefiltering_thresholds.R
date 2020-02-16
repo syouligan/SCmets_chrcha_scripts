@@ -89,7 +89,7 @@ undetectedGenes <- rowSums(counts(raw_experiment)) == 0
 raw_experiment <- raw_experiment[! which(undetectedGenes), ] # Remove undetected genes
 
 # Calculate SAVER standard error estimates and plot relative to library size. Likely observed two distinct populations, one with low library size and high standard error, the other with higher library size and lower standard error (set filter parameters to capture this population)
-saver.out <- saver(counts(raw_experiment), ncores = 64)
+saver.out <- saver(counts(raw_experiment), ncores = 32)
 pdf("Unfiltered_SAVER_SEvsLibSize.pdf")
 plot(colSums(counts(raw_experiment)), colMeans(saver.out$se), log="x")
 dev.off()
