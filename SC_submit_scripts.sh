@@ -6,7 +6,7 @@ module load briglo/R/3.6.0
 # Set paths
 projectID='SCmets_chrcha'
 resultsPath='/share/ScratchGeneral/scoyou/sarah_projects/'
-scriptsPath='/home/scoyou/projects/'
+scriptsPath='/home/scoyou/sarah_projects/'
 
 # Make log path
 logDir=$scriptsPath$projectID'/'$projectID'_scripts/logs'
