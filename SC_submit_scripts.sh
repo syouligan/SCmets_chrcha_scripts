@@ -12,7 +12,7 @@ scriptsPath='/home/scoyou/projects/'
 logDir=$scriptsPath$projectID'/'$projectID'_scripts/logs'
 mkdir -p $logDir
 
-qsub -P OsteoporosisandTranslationalResearch -N 'Determine_thresholds_'$projectID -b y -wd $logDir -j y -R y -l mem_requested=8G -pe smp 32 -V -m bea -M s.youlten@garvan.org.au R CMD BATCH $scriptsPath$projectID'/'$projectID'_scripts/Determine_prefiltering_thresholds.R'
+qsub -P OsteoporosisandTranslationalResearch -N 'Determine_thresholds_'$projectID -b y -wd $logDir -j y -R y -l mem_requested=8G -pe smp 64 -V -m bea -M s.youlten@garvan.org.au R CMD BATCH $scriptsPath$projectID'/'$projectID'_scripts/Determine_prefiltering_thresholds.R'
 #qsub -P OsteoporosisandTranslationalResearch -N 'Prefiltering_'$projectID -b y -wd $logDir -j y -R y -l mem_requested=8G -pe smp 32 -V -m bea -M s.youlten@garvan.org.au R CMD BATCH $scriptsPath$projectID'/'$projectID'_scripts/Prefiltering_whole_experiment.R'
 #qsub -P OsteoporosisandTranslationalResearch -N 'NormyCluster_'$projectID -b y -hold_jid 'Prefiltering_'$projectID -wd $logDir -j y -R y -l mem_requested=8G -pe smp 64 -V -m bea -M s.youlten@garvan.org.au R CMD BATCH $scriptsPath$projectID'/'$projectID'_scripts/Whole_experiment_batch_correction_and_clustering.R'
 #qsub -P OsteoporosisandTranslationalResearch -N 'Cell_Cycle_'$projectID -b y -hold_jid 'NormyCluster_'$projectID -wd $logDir -j y -R y -l mem_requested=8G -pe smp 64 -V -m bea -M s.youlten@garvan.org.au R CMD BATCH $scriptsPath$projectID'/'$projectID'_scripts/Whole_experiment_cell_cycle_annotation.R'
