@@ -31,6 +31,7 @@ library('ggridges')
 library('viridis')
 library('Matrix')
 library('SAVER')
+library('stringr')
 
 # Load all data into single object
 # --------------------------------------------------------------------------
@@ -58,8 +59,11 @@ raw_experiment$Replicate <- as.character(sample_IDs$Replicate) [idx]
 raw_experiment$cellIDs <- rownames((colData(raw_experiment)))
 
 # Add gene labels and organism info.
-ensembl_ids <- data.frame(rowData(raw_experiment)) %>%
-  separate(ID, c("Organism", "Ensembl"), "_", remove = TRUE)
+ensembl_ids <- data.frame(rowData(raw_experiment))
+ensembl_ids$ID <- str_replace_all(ensembl_ids$ID, "___", "_")
+rowData(raw_experiment)$GeneSymbol <- str_replace_all(ensembl_ids$ID, "___", "_")
+ensembl_ids <- ensembl_ids %>%
+  separate(ID, c("Organism", "Ensembl"), sep = "([\\_+])", remove = TRUE)
 rowData(raw_experiment)$Organism <- as.character(ensembl_ids$Organism)
 rowData(raw_experiment)$Ensembl <- as.character(ensembl_ids$Ensembl)
 rowData(raw_experiment)$GeneSymbol <- as.character(gsub(".*_", "", rowData(raw_experiment)$Symbol))
@@ -123,12 +127,12 @@ ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent, y = Sample, fi
   ggsave("Mito_percent_ridge_raw.pdf", useDingbats = FALSE)
 
 # Save practice dataset (5% of cells from each sample)
-filtered_exp$cellIDs <- rownames((colData(filtered_exp)))
-fe_subset <- data.frame(data.frame(colData(filtered_exp)) %>%
+raw_experiment$cellIDs <- rownames((colData(raw_experiment)))
+fe_subset <- data.frame(data.frame(colData(raw_experiment)) %>%
                           group_by(Sample) %>%
                           sample_frac(0.05))
-filtered_exp$Practice_subset <- is.element(rownames(colData(filtered_exp)), fe_subset$cellIDs)
-practice_exp <- filtered_exp[,which(filtered_exp$Practice_subset)]
+raw_experiment$Practice_subset <- is.element(rownames(colData(raw_experiment)), fe_subset$cellIDs)
+practice_exp <- raw_experiment[,which(raw_experiment$Practice_subset)]
 
 if (place == "wolfpack") {
   saveRDS(practice_exp, "practice_all_data/Raw_experiment_all_samples_labeled_practice.rds")
