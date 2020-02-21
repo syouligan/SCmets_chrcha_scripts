@@ -93,7 +93,20 @@ undetectedGenes <- rowSums(counts(raw_experiment)) == 0
 raw_experiment <- raw_experiment[!undetectedGenes, ] # Remove undetected genes
 
 # Calculate SAVER standard error estimates and plot relative to library size. Likely observed two distinct populations, one with low library size and high standard error, the other with higher library size and lower standard error (set filter parameters to capture this population)
-saver.out <- saver(counts(raw_experiment), ncores = 32)
+row_names <- split(rownames(filtered_exp), ceiling(seq_along(rownames(filtered_exp))/2500))
+names(row_names)
+
+for(i in names(row_names)){
+  saver.new <- saver(counts(filtered_exp), pred.genes = which(rownames(filtered_exp) %in% row_names[[i]]), pred.genes.only = TRUE, do.fast = FALSE, ncores = 32)
+  if(exists(saver.out)){
+    saver.out <- combine.saver(list(saver.out, saver.new))
+  } else {
+    saver.out <- saver.new
+    }
+  } # Split genes into multiple groups of 2500 to avaoid memory issues and then recombine into single object
+
+saveRDS(saver.out, "SAVER_run_raw_experiment.rds")
+
 pdf("Unfiltered_SAVER_SEvsLibSize.pdf")
 plot(colSums(counts(raw_experiment)), colMeans(saver.out$se), log="x")
 dev.off()
