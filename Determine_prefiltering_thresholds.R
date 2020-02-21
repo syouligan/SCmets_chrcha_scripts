@@ -17,7 +17,7 @@ if(dir.exists("/Users/mac/cloudstor/")) {
   place <- "wolfpack"
 }
 
-setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/"))
+setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/"))
 
 # Libraries
 library('DropletUtils')
