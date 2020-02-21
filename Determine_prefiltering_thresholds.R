@@ -90,7 +90,7 @@ raw_experiment <- raw_experiment[which(rowData(raw_experiment)$Organism == "GRCh
 
 # Remove genes that have zero counts across all cells
 undetectedGenes <- rowSums(counts(raw_experiment)) == 0
-raw_experiment <- raw_experiment[! which(undetectedGenes), ] # Remove undetected genes
+raw_experiment <- raw_experiment[!undetectedGenes, ] # Remove undetected genes
 
 # Calculate SAVER standard error estimates and plot relative to library size. Likely observed two distinct populations, one with low library size and high standard error, the other with higher library size and lower standard error (set filter parameters to capture this population)
 saver.out <- saver(counts(raw_experiment), ncores = 32)
