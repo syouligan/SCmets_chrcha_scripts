@@ -51,7 +51,7 @@ stats <- cbind(log10(raw_experiment$Lib_size), log10(raw_experiment$Genes_detect
 outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
 multi.outlier <- isOutlier(outlying, type = "higher")
 summary(multi.outlier)
-raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
+Mito_percent_discard <- raw_experiment$Mito_percent > 20
 raw_experiment$discard <- multi.outlier | Mito_percent_discard
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
 
