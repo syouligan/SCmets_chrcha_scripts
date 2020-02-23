@@ -46,13 +46,13 @@ if (place == "local") {
 # Filter genes and cells that have high outlyingness based on the combination of QC metrics.
 # --------------------------------------------------------------------------
 
-stats <- cbind(log10(raw_experiment$Lib_size), log10(raw_experiment$Genes_detected), raw_experiment$Mito_percent)
+# Idenitify cells to discard based on outlier based on PC of Lib_size and Genes_detected or >20% mitochondrial content
+stats <- cbind(log10(raw_experiment$Lib_size), log10(raw_experiment$Genes_detected))
 outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
 multi.outlier <- isOutlier(outlying, type = "higher")
 summary(multi.outlier)
-
-# Idenitify cells to discard based on 3MAD outlier in either number of detected genes, library size or >20% mitochondrial content
-raw_experiment$discard <- multi.outlier
+raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
+raw_experiment$discard <- multi.outlier | Mito_percent_discard
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
 
 # Plot QC stats
