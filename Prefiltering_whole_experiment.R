@@ -11,12 +11,15 @@
 if(dir.exists("/Users/mac/cloudstor/")) {
   location <- "/Users/mac/cloudstor/"
   place <- "local"
+  folder <- "practice_all_data"
+  
 } else {
   location <- "/share/ScratchGeneral/scoyou/"
   place <- "wolfpack"
+  folder <- "all_data"
 }
 
-setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/"))
+setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/", folder))
 
 # Libraries
 library('DropletUtils')
@@ -29,59 +32,44 @@ library('ggplot2')
 library('ggridges')
 library('viridis')
 library('Matrix')
+library('robustbase')
 
 # Load all data into single object
 # --------------------------------------------------------------------------
 
 if (place == "local") {
-  
-  raw_experiment <- readRDS("practice_all_data/Raw_experiment_all_samples_labeled_practice.rds") # Load practice dataset generated after the following steps
-  
+  raw_experiment <- readRDS("Raw_experiment_all_samples_labeled_practice.rds") # Load practice dataset generated after the following steps
 } else {
-
-  raw_experiment <- readRDS("all_data/Raw_experiment_all_samples_labeled.rds") # Load practice dataset generated after the following steps
-
+  raw_experiment <- readRDS("Raw_experiment_all_samples_labeled.rds") # Load practice dataset generated after the following steps
 }
 
-# Filter genes and cells based on SE, library size thresholds and mitochondrial content (>20%).
+# Filter genes and cells that have high outlyingness based on the combination of QC metrics.
 # --------------------------------------------------------------------------
 
+stats <- cbind(log10(raw_experiment$Lib_size), log10(raw_experiment$Genes_detected), raw_experiment$Mito_percent)
+outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
+multi.outlier <- isOutlier(outlying, type = "higher")
+summary(multi.outlier)
+
 # Idenitify cells to discard based on 3MAD outlier in either number of detected genes, library size or >20% mitochondrial content
-discard <- quickPerCellQC(stats, batch=raw_experiment$Sample)
-raw_experiment$discard_NumGenes <- discard$low_n_features
-raw_experiment$discard_SE <- raw_experiment$meanSAVERse < XXX
-raw_experiment$discard_LibSize <- raw_experiment$Lib_size < XXX
-raw_experiment$discard_Mito <- raw_experiment$Mito_percent > 20
-raw_experiment$discard <- raw_experiment$discard_NumGenes | raw_experiment$discard_SE | raw_experiment$discard_LibSize | raw_experiment$discard_Mito
-
-sum(raw_experiment$discard_NumGenes)
-sum(raw_experiment$discard_SE)
-sum(raw_experiment$discard_LibSize)
-sum(raw_experiment$discard_Mito)
-sum(raw_experiment$discard)
-
+raw_experiment$discard <- multi.outlier
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
 
 # Plot QC stats
-ggplot(data.frame(colData(filtered_exp)), aes(x = Human_percent, y = Sample, fill = Tissue)) +
-  geom_density_ridges() +
-  theme_minimal() +
-  ggsave("Human_percent_ridge_filtered.pdf", useDingbats = FALSE)
-
 ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Library_size_ridge_filtered.pdf", useDingbats = FALSE)
+  ggsave("Library_size_ridge_filtered_QC.pdf", useDingbats = FALSE)
 
 ggplot(data.frame(colData(filtered_exp)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Number_of_genes_ridge_filtered.pdf", useDingbats = FALSE)
+  ggsave("Number_of_genes_ridge_filtered_QC.pdf", useDingbats = FALSE)
 
 ggplot(data.frame(colData(filtered_exp)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Mito_percent_ridg_filterede.pdf", useDingbats = FALSE)
+  ggsave("Mito_percent_ridge_filtered_QC.pdf", useDingbats = FALSE)
 
 # Remove genes without counts in at least 3 cells in each samples for any tissue
 tmp_structure <- data.frame(unique(colData(filtered_exp)[ ,c("Tissue", "Sample")]))
@@ -108,7 +96,7 @@ colSums(GOI) # Number of genes "active" in each tumour location
 
 # Number of cells remaining per sample
 cells_remaining <- data.frame(table(filtered_exp$Sample))
-write.csv(cells_remaining, "Cells_remaining_number.csv", row.names = FALSE)
+write.csv(cells_remaining, "Cells_remaining_number_QC.csv", row.names = FALSE)
 
 ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   geom_bar(stat="identity", color="black") +
@@ -116,7 +104,7 @@ ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   scale_color_viridis(discrete=TRUE) +
   coord_flip() +
   theme_classic() +
-  ggsave("Cells_remaining_barplot.pdf", useDingbats = FALSE)
+  ggsave("Cells_remaining_barplot_QC.pdf", useDingbats = FALSE)
 
 # Save datasets.
 # --------------------------------------------------------------------------
@@ -130,14 +118,14 @@ filtered_exp$Practice_subset <- is.element(rownames(colData(filtered_exp)), fe_s
 practice_exp <- filtered_exp[,which(filtered_exp$Practice_subset)]
 
 if (place == "wolfpack") {
-  saveRDS(practice_exp, "practice_all_data/Prefiltered_experiment_practice.rds")
+  saveRDS(practice_exp, "Prefiltered_QC_experiment_practice.rds")
 } else {
-  print("Working local")
+  saveRDS(filtered_exp, "Prefiltered_QC_experiment_practice.rds")
 }
 
 # Save total filtered dataset
 if (place == "wolfpack") {
-  saveRDS(filtered_exp, "all_data/Prefiltered_experiment_all.rds")
+  saveRDS(filtered_exp, "Prefiltered_QC_experiment_all.rds")
 } else {
   print("Working local")
 }

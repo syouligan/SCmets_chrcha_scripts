@@ -12,12 +12,15 @@
 if(dir.exists("/Users/mac/cloudstor/")) {
   location <- "/Users/mac/cloudstor/"
   place <- "local"
+  folder <- "practice_all_data"
+  
 } else {
   location <- "/share/ScratchGeneral/scoyou/"
   place <- "wolfpack"
+  folder <- "all_data"
 }
 
-setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/"))
+setwd(paste0(location, "sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/", folder))
 
 # Libraries
 library('DropletUtils')
@@ -42,12 +45,12 @@ sample_IDs <- read.csv(paste0(location, "sarah_projects/SCMDA231mets_chrcha/samp
 # Load all samples and save before editing
 data_directory <- paste0(location, "sarah_projects/SCMDA231mets_chrcha/raw_data/data")
 
-if(file.exists("all_data/Raw_experiment_all_samples_old_labels.rds")) {
-  raw_experiment <- readRDS("all_data/Raw_experiment_all_samples_old_labels.rds")
+if(file.exists("Raw_experiment_all_samples_old_labels.rds")) {
+  raw_experiment <- readRDS("Raw_experiment_all_samples_old_labels.rds")
   } else {
   raw_experiment <- read10xCounts(paste0(list.files(data_directory, full.names = TRUE), '/outs/filtered_feature_bc_matrix'), col.names = TRUE, sample.names = list.files(data_directory, full.names = FALSE))
   if (place == "wolfpack") {
-    saveRDS(raw_experiment, "all_data/Raw_experiment_all_samples_old_labels.rds")
+    saveRDS(raw_experiment, "Raw_experiment_all_samples_old_labels.rds")
   } else {
     print("Working local")
   }
@@ -128,14 +131,14 @@ raw_experiment$Practice_subset <- is.element(rownames(colData(raw_experiment)), 
 practice_exp <- raw_experiment[,which(raw_experiment$Practice_subset)]
 
 if (place == "wolfpack") {
-  saveRDS(practice_exp, "practice_all_data/Raw_experiment_all_samples_labeled_practice.rds")
+  saveRDS(practice_exp, "Raw_experiment_all_samples_labeled_practice.rds")
 } else {
   print("Working local")
 }
 
 # Save total raw dataset
 if (place == "wolfpack") {
-  saveRDS(raw_experiment, "all_data/Raw_experiment_all_samples_labeled.rds")
+  saveRDS(raw_experiment, "Raw_experiment_all_samples_labeled.rds")
 } else {
   print("Working local")
 }
