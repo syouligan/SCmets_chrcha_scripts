@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Determine cell filtering thresholds using SAVER standard error, library size, mito content, etc
+#! Determine cell filtering thresholds using gene counts, library size, mito content, etc
 # --------------------------------------------------------------------------
 
 # Set working directory, load data and libraries
@@ -112,15 +112,39 @@ ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill =
   theme_minimal() +
   ggsave("Library_size_ridge_raw.pdf", useDingbats = FALSE)
 
+ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  xlim(0, 10000) +
+  theme_minimal() +
+  ggsave("Library_size_ridge_raw_10000.pdf", useDingbats = FALSE)
+
 ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Number_of_genes_ridge_raw.pdf", useDingbats = FALSE)
 
+ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  xlim(0, 2000) +
+  theme_minimal() +
+  ggsave("Number_of_genes_ridge_raw_2000.pdf", useDingbats = FALSE)
+
 ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Mito_percent_ridge_raw.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x=Lib_size, y=Genes_detected)) +
+  geom_hex(bins = 70) +
+  scale_fill_continuous(type = "viridis") +
+  theme_bw() +
+  ggsave("Genes_vs_lib_size_density.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(filtered_exp)), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
+  geom_point() +
+  scale_color_viridis_c(option = "D") +
+  theme_bw() +
+  ggsave("Genes_vs_lib_size_vs_mito_dotplot.pdf", useDingbats = FALSE)
 
 # Save practice dataset (5% of cells from each sample)
 raw_experiment$cellIDs <- rownames((colData(raw_experiment)))

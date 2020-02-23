@@ -33,7 +33,7 @@ if(place == "local") {
   cores <- 4
   filtered_exp <- readRDS("Prefiltered_experiment_practice.rds") # uses practice data if local
 } else {
-  cores <- 64
+  cores <- 32
   filtered_exp <- readRDS("Prefiltered_experiment_all.rds") # uses whole dataset if wolfpack
 }
 
