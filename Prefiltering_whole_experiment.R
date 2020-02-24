@@ -43,17 +43,22 @@ if (place == "local") {
   raw_experiment <- readRDS("Raw_experiment_all_samples_labeled.rds") # Load practice dataset generated after the following steps
 }
 
-# Filter genes and cells that have high outlyingness based on the combination of QC metrics.
+# Filter genes and cells based on the combination of QC metrics.
 # --------------------------------------------------------------------------
 
 # Idenitify cells to discard based on outlier based on PC of Lib_size and Genes_detected or >20% mitochondrial content
-stats <- cbind(log10(raw_experiment$Lib_size), log10(raw_experiment$Genes_detected))
-outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
-multi.outlier <- isOutlier(outlying, type = "higher")
-summary(multi.outlier)
-Mito_percent_discard <- raw_experiment$Mito_percent > 20
-raw_experiment$discard <- multi.outlier | Mito_percent_discard
+raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
+raw_experiment$Genes_percent_discard <- raw_experiment$Genes_detected < 700
+raw_experiment$Libsize_percent_discard <- raw_experiment$Lib_size < 1000 | raw_experiment$Lib_size > 50000
+
+raw_experiment$discard <- raw_experiment$Mito_percent_discard | raw_experiment$Genes_percent_discard | raw_experiment$Libsize_percent_discard
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
+
+ggplot(data.frame(colData(raw_experiment[raw_experiment$discard, ])), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
+  geom_point() +
+  scale_color_viridis_c(option = "D") +
+  theme_bw() +
+  ggsave("Genes_vs_lib_size_vs_mito_discarded_dotplot.pdf", useDingbats = FALSE)
 
 # Plot QC stats
 ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
@@ -95,9 +100,18 @@ filtered_exp <- filtered_exp[which(GOI$Any_Active), ] # Subset to active genes
 colSums(GOI) # Number of genes "active" in each tumour location
 
 # Number of cells remaining per sample
+cells_before_QC <- data.frame(table(raw_experiment$Sample))
+write.csv(cells_before_QC, "Cells_before_QC_number.csv", row.names = FALSE)
+ggplot(data=cells_before_QC, aes(x=Var1, y=Freq)) +
+  geom_bar(stat="identity", color="black") +
+  ggtitle("Cells before QC") +
+  scale_color_viridis(discrete=TRUE) +
+  coord_flip() +
+  theme_classic() +
+  ggsave("Cells_before_QC_barplot.pdf", useDingbats = FALSE)
+
 cells_remaining <- data.frame(table(filtered_exp$Sample))
 write.csv(cells_remaining, "Cells_remaining_number_QC.csv", row.names = FALSE)
-
 ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   geom_bar(stat="identity", color="black") +
   ggtitle("Cells remaining") +

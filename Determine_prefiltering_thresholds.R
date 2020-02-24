@@ -167,7 +167,7 @@ ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected, y = Sample, 
 ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent)) +
   geom_histogram() +
   theme_minimal() +
-  ggsave("Mito_percent__histogram_raw_total.pdf", useDingbats = FALSE)
+  ggsave("Mito_percent_histogram_raw_total.pdf", useDingbats = FALSE)
 
 ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
