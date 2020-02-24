@@ -29,9 +29,9 @@ set.seed(100)
 
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
-  filtered_exp <- readRDS("Prefiltered_experiment_practice.rds") # uses practice data if local
+  filtered_exp <- readRDS("Prefiltered_QC_experiment_practice.rds") # uses practice data if local
 } else {
-  filtered_exp <- readRDS("Prefiltered_experiment_all.rds") # uses whole dataset if wolfpack
+  filtered_exp <- readRDS("Prefiltered_QC_experiment_all.rds") # uses whole dataset if wolfpack
 }
 
 # filtered_exp <- readRDS("~/cloudstor/sarah_projects/DEP_hg19_SCmets_chrcha/project_results/prefiltered/practice_all_data/redundant_incomplete/Prefiltered_experiment_Practice_merge_cluster_wCC.rds")
