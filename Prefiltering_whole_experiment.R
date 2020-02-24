@@ -46,7 +46,7 @@ if (place == "local") {
 # Filter genes and cells based on the combination of QC metrics.
 # --------------------------------------------------------------------------
 
-# Idenitify cells to discard based on outlier based on PC of Lib_size and Genes_detected or >20% mitochondrial content
+# Idenitify cells to discard based on outlier based on Lib_size, Genes_detected or >20% mitochondrial content determined using histograms of data
 raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
 raw_experiment$Genes_percent_discard <- raw_experiment$Genes_detected < 700
 raw_experiment$Libsize_percent_discard <- raw_experiment$Lib_size < 1000 | raw_experiment$Lib_size > 50000
