@@ -6,10 +6,10 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/all_data")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data")
   place <- "wolfpack"
 }
 
@@ -30,39 +30,28 @@ library('Matrix')
 set.seed(100)
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
-  cores <- 4
-  filtered_exp <- readRDS("Prefiltered_experiment_practice.rds") # uses practice data if local
+  filtered_exp <- readRDS("Prefiltered_QC_experiment_practice.rds") # uses practice data if local
 } else {
-  cores <- 32
-  filtered_exp <- readRDS("Prefiltered_experiment_all.rds") # uses whole dataset if wolfpack
+  filtered_exp <- readRDS("Prefiltered_QC_experiment_all.rds") # uses whole dataset if wolfpack
 }
 
-# Normalised to adjust for differences between samples
-filtered_exp <- multiBatchNorm(filtered_exp, batch = filtered_exp$Sample)
-
-# Perform normalisation and imputation using saver
-saver.out <- saver(counts(filtered_exp), ncores = cores)
-assays(filtered_exp, "logestimate") <- log(saver.out$estimate)
+# Normalised to adjust for differences in library depth
+clusters <- quickCluster(filtered_exp)
+filtered_exp <- computeSumFactors(filtered_exp, clusters=clusters, min.mean = 0.1)
+filtered_exp <- logNormCounts(filtered_exp)
 
 # Select HVG based on combined variance across all samples
-filtered_exp.dec <- modelGeneVarByPoisson(filtered_exp, block = filtered_exp$Sample, assay.type = "logestimate")
-HVG <- filtered_exp.dec$bio > 0
+filtered_exp.dec <- modelGeneVarByPoisson(filtered_exp, block = filtered_exp$Sample)
+HVG <- getTopHVGs(filtered_exp.dec, n = 5000)
 rowData(filtered_exp)$bio_var <- filtered_exp.dec$bio
 rowData(filtered_exp)$bio_var_FDR <- filtered_exp.dec$FDR
-rowData(filtered_exp)$HVG <- filtered_exp.dec$bio > 0
-rowData(filtered_exp)$HVG_sig <- filtered_exp.dec$bio > 0 & filtered_exp.dec$FDR < 0.05
-
-pdf("Mean_variance_model_fit_poisson.pdf")
-plot(filtered_exp.dec$mean, filtered_exp.dec$total, pch=16, xlab="Mean of log-expression", ylab="Variance of log-expression")
-# curve(metadata(filtered_exp.dec)$trend(x), col="dodgerblue", add=TRUE)
-dev.off()
+rowData(filtered_exp)$HVG <- is.element(rownames(filtered_exp), HVG)
 
 # Run multibatch PCA and clustering without correction
 sample_details <- data.frame(unique(filtered_exp$Sample)) %>%
   separate(1, c("Tissue", "Replicate"), "_", remove = FALSE)
 
 multiPCA <- multiBatchPCA(filtered_exp,
-                          assay.type = "logestimate",
                           batch = filtered_exp$Sample,
                           subset.row=HVG,
                           get.all.genes = TRUE,
@@ -77,8 +66,8 @@ reducedDim(filtered_exp, "PCA") <- PCA50
 
 # filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
 
-snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20, assay.type = "logestimate")
-clusters <- igraph::cluster_walktrap(snn.gr)$membership
+snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20)
+clusters <- igraph::cluster_louvain(snn.gr)$membership
 uncorrected_tab <- table(Cluster=clusters, Batch=filtered_exp$Sample)
 write.csv(uncorrected_tab, "Uncorrected_batch_cell_cluster_membership.csv")
 uncorrected_tab
@@ -106,7 +95,7 @@ plotReducedDim(filtered_exp, dimred="UMAP", colour_by = "uncorrected_cluster", t
   scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_uncorrected_with_clusters.pdf")
 
-phate.tree <- phate(Matrix::t(assay(filtered_exp, "logestimate"))) # Runs PHATE diffusion map
+phate.tree <- phate(Matrix::t(assay(filtered_exp, "logcounts"))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE") <- phate.tree$embedding
 plotReducedDim(filtered_exp, dimred="PHATE", colour_by = "Tissue", text_by = "uncorrected_cluster") +
   scale_fill_viridis_d(option = "B") +
@@ -125,7 +114,6 @@ merge_order <- list(list(c("LN_3", "LN_4", "LN_2", "LN_1")),
                     list(c("Lung_3", "Lung_4", "Lung_1", "Lung_2")))
 
 fastMNN.sce <- fastMNN(filtered_exp,
-                       assay.type = "logestimate",
                        subset.row=HVG,
                        cos.norm = FALSE,
                        k=20,
@@ -134,7 +122,7 @@ fastMNN.sce <- fastMNN(filtered_exp,
                        merge.order = merge_order)
 
 snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20)
-clusters <- igraph::cluster_walktrap(snn.gr)$membership
+clusters <- igraph::cluster_louvain(snn.gr)$membership
 corrected_tab <- table(Cluster=clusters, Batch=fastMNN.sce$batch)
 write.csv(corrected_tab, "Corrected_batch_cell_cluster_membership.csv")
 corrected_tab
@@ -186,29 +174,29 @@ ggplot(coords, aes(x=PC1, y=PC2, label = rownames(coords))) +
 
 # Visualise corrected clusters using PCA, UMAP and PHATE
 filtered_exp$cluster <- factor(clusters)
-reducedDim(filtered_exp, "corrected_logestimate") <- reducedDim(fastMNN.sce, "corrected")
-assay(filtered_exp, "reconstructed_logestimate") <- assay(fastMNN.sce, "reconstructed")
+reducedDim(filtered_exp, "corrected_fastMNN") <- reducedDim(fastMNN.sce, "corrected")
+assay(filtered_exp, "reconstructed_fastMNN") <- assay(fastMNN.sce, "reconstructed")
 
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "Mito_percent", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
   scale_fill_viridis_c(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_Mito.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "Genes_detected", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Genes_detected", text_by = "cluster") +
   scale_fill_viridis_c(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_NGenes.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "Lib_size", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Lib_size", text_by = "cluster") +
   scale_fill_viridis_c(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_Lib_size.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "Tissue", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Tissue", text_by = "cluster") +
   scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_tissue.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "Replicate", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "Replicate", text_by = "cluster") +
   scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters_replicate.pdf")
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "cluster", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "cluster", text_by = "cluster") +
   scale_fill_viridis_d(option = "B") +
   ggsave("Fastmnn_corrected_with_clusters.pdf")
 
-filtered_exp <- runUMAP(filtered_exp, dimred="corrected_logestimate", name = "UMAP_fastMNN")
+filtered_exp <- runUMAP(filtered_exp, dimred="corrected_fastMNN", name = "UMAP_fastMNN")
 plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
   scale_fill_viridis_c(option = "B") +
   ggsave("UMAP_corrected_with_clusters_Mito.pdf")
@@ -228,7 +216,7 @@ plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "cluster", text_
   scale_fill_viridis_d(option = "B") +
   ggsave("UMAP_corrected_with_clusters.pdf")
 
-phate.out <- phate(Matrix::t(assay(filtered_exp, "reconstructed_logestimate"))) # Runs PHATE diffusion map
+phate.out <- phate(Matrix::t(assay(filtered_exp, "reconstructed_fastMNN"))) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE_fastMNN") <- phate.out$embedding
 plotReducedDim(filtered_exp, dimred="PHATE_fastMNN", colour_by = "Mito_percent", text_by = "cluster") +
   scale_fill_viridis_c(option = "B") +

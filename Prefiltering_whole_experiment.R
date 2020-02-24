@@ -48,10 +48,15 @@ if (place == "local") {
 
 # Idenitify cells to discard based on outlier based on Lib_size, Genes_detected or >20% mitochondrial content determined using histograms of data
 raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
+sum(raw_experiment$Mito_percent_discard)
 raw_experiment$Genes_percent_discard <- raw_experiment$Genes_detected < 700
+sum(raw_experiment$Genes_percent_discard)
 raw_experiment$Libsize_percent_discard <- raw_experiment$Lib_size < 1000 | raw_experiment$Lib_size > 50000
+sum(raw_experiment$Libsize_percent_discard)
 
 raw_experiment$discard <- raw_experiment$Mito_percent_discard | raw_experiment$Genes_percent_discard | raw_experiment$Libsize_percent_discard
+sum(raw_experiment$discard)
+
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
 
 ggplot(data.frame(colData(raw_experiment[raw_experiment$discard, ])), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
