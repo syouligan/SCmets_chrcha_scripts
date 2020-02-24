@@ -6,10 +6,10 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/practice_all_data/pseudo-bulk_DGE") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data/pseudo-bulk_DGE") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/all_data")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE")
   place <- "wolfpack"
 }
 
@@ -42,11 +42,11 @@ exprs <- counts(summed)
 colnames(exprs) <- unique(paste0(filtered_exp$Tissue, "_", filtered_exp$Replicate))
 exprs <- exprs[ ,order(colnames(exprs))]
 
-# Find genes with >10 UMI in all replicates of a given tissue type
-active_liver <- rowSums(exprs[,1:4] > 5) == 4
-active_LN <- rowSums(exprs[,5:8] > 5) == 4
-active_lung <- rowSums(exprs[,9:12] > 5) == 4
-active_primary <- rowSums(exprs[,13:16] > 5) == 4
+# Find genes detected in all replicates of a given tissue type
+active_liver <- rowSums(exprs[,1:4] >= 1) == 4
+active_LN <- rowSums(exprs[,5:8] >= 1) == 4
+active_lung <- rowSums(exprs[,9:12] >= 1) == 4
+active_primary <- rowSums(exprs[,13:16] >= 1) == 4
 geneActivity <- data.frame("Liver" = active_liver, "LN" = active_LN, "Lung" = active_lung, "Primary" = active_primary)
 
 # Identify differentially expressed genes in MDA cells from different tissues
@@ -91,5 +91,5 @@ for(i in 1:nrow(comparisons)) {
   summary(DEG3)
   results <- data.frame(topTreat(lbFit3, coef = 5, n = Inf, p.value = Inf))
   
-  write.csv(results, paste0(tissue1, "_", tissue2, "_DEG_0LFC.csv"))
+  write.csv(results, paste0(tissue1, "_", tissue2, "_DEG_0.5LFC.csv"))
 }

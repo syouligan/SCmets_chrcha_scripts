@@ -6,10 +6,10 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/by_organ") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/by_organ") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/by_organ")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/by_organ")
   place <- "wolfpack"
 }
 
@@ -30,22 +30,26 @@ library('Matrix')
 set.seed(100)
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
-  filtered_exp <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/practice_all_data/Prefiltered_experiment_practice_merge_cluster_wCC.rds") # uses practice data if local
+  filtered_exp <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data/Prefiltered_experiment_practice_merge_cluster_wCC.rds") # uses practice data if local
 } else {
-  filtered_exp <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltered/all_data/Prefiltered_experiment_all_merge_cluster_wCC.rds") # uses whole dataset if wolfpack
+  filtered_exp <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/Prefiltered_experiment_all_merge_cluster_wCC.rds") # uses whole dataset if wolfpack
 }
 
 # Subset filtered experiment to each tissue
 for(i in unique(filtered_exp$Tissue)) {
   tissue_exp <- filtered_exp[,filtered_exp$Tissue == i]
   
+  # Normalised to adjust for differences in library depth
+  clusters <- quickCluster(tissue_exp)
+  tissue_exp <- computeSumFactors(tissue_exp, clusters=clusters, min.mean = 0.1)
+  tissue_exp <- logNormCounts(tissue_exp)
+  
   # Select HVG based on combined variance across all samples
-  tissue_exp.dec <- modelGeneVarByPoisson(tissue_exp, block = tissue_exp$Sample, assay.type = "logestimate")
-  HVG <- tissue_exp.dec$bio > 0
+  tissue_exp.dec <- modelGeneVarByPoisson(tissue_exp, block = tissue_exp$Sample)
+  HVG <- getTopHVGs(tissue_exp.dec, n = 5000)
   rowData(tissue_exp)$bio_var <- tissue_exp.dec$bio
   rowData(tissue_exp)$bio_var_FDR <- tissue_exp.dec$FDR
-  rowData(tissue_exp)$HVG <- tissue_exp.dec$bio > 0
-  rowData(tissue_exp)$HVG_sig <- tissue_exp.dec$bio > 0 & tissue_exp.dec$FDR < 0.05
+  rowData(tissue_exp)$HVG <- is.element(rownames(tissue_exp.dec), HVG)
   
   pdf(paste0(i, "/Mean_variance_model_fit_poisson_", i, ".pdf"))
   plot(tissue_exp.dec$mean, tissue_exp.dec$total, pch=16, xlab="Mean of log-expression", ylab="Variance of log-expression")
@@ -57,7 +61,6 @@ for(i in unique(filtered_exp$Tissue)) {
     separate(1, c("Tissue", "Replicate"), "_", remove = FALSE)
   
   multiPCA <- multiBatchPCA(tissue_exp,
-                            assay.type = "logestimate",
                             batch = tissue_exp$Sample,
                             subset.row=HVG,
                             get.all.genes = TRUE,
@@ -72,7 +75,7 @@ for(i in unique(filtered_exp$Tissue)) {
   
   # tissue_exp <- denoisePCA(tissue_exp, technical=tissue_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
   
-  snn.gr <- buildSNNGraph(tissue_exp, use.dimred="PCA_tissue", k=20, assay.type = "logestimate")
+  snn.gr <- buildSNNGraph(tissue_exp, use.dimred="PCA_tissue", k=20)
   clusters <- igraph::cluster_walktrap(snn.gr)$membership
   uncorrected_tab <- table(Cluster=clusters, Batch=tissue_exp$Sample)
   write.csv(uncorrected_tab, paste0(i, "/Uncorrected_batch_cell_cluster_membership_", i, ".csv"))
@@ -120,7 +123,6 @@ for(i in unique(filtered_exp$Tissue)) {
                       Lung = list(c("Lung_3", "Lung_4", "Lung_1", "Lung_2")))
   
   fastMNN.sce <- fastMNN(tissue_exp,
-                         assay.type = "logestimate",
                          subset.row=HVG,
                          cos.norm = FALSE,
                          k=20,
@@ -138,29 +140,29 @@ for(i in unique(filtered_exp$Tissue)) {
   
   # Visualise corrected clusters using PCA, UMAP and PHATE
   tissue_exp$cluster_tissue <- factor(clusters)
-  reducedDim(tissue_exp, "corrected_logestimate_tissue") <- reducedDim(fastMNN.sce, "corrected")
-  assay(tissue_exp, "reconstructed_logestimate_tissue") <- assay(fastMNN.sce, "reconstructed")
+  reducedDim(tissue_exp, "corrected_fastMNN_tissue") <- reducedDim(fastMNN.sce, "corrected")
+  assay(tissue_exp, "reconstructed_fastMNN_tissue") <- assay(fastMNN.sce, "reconstructed")
   
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "Mito_percent", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "Mito_percent", text_by = "cluster_tissue") +
     scale_fill_viridis_c(option = "B") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_Mito_", i, ".pdf"))
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "Genes_detected", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "Genes_detected", text_by = "cluster_tissue") +
     scale_fill_viridis_c(option = "B") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_NGenes_", i, ".pdf"))
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "Lib_size", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "Lib_size", text_by = "cluster_tissue") +
     scale_fill_viridis_c(option = "B") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_Lib_size_", i, ".pdf"))
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "CC.Phase", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "CC.Phase", text_by = "cluster_tissue") +
     scale_fill_viridis_d(option = "D") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_cell.cycle.phase_", i, ".pdf"))
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "Replicate", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "Replicate", text_by = "cluster_tissue") +
     scale_fill_viridis_d(option = "C") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_replicate_", i, ".pdf"))
-  plotReducedDim(tissue_exp, dimred="corrected_logestimate_tissue", colour_by = "cluster_tissue", text_by = "cluster_tissue") +
+  plotReducedDim(tissue_exp, dimred="corrected_fastMNN_tissue", colour_by = "cluster_tissue", text_by = "cluster_tissue") +
     scale_fill_viridis_d(option = "D") +
     ggsave(paste0(i, "/Fastmnn_corrected_with_clusters_", i, ".pdf"))
   
-  tissue_exp <- runUMAP(tissue_exp, dimred="corrected_logestimate_tissue", name = "UMAP_fastMNN_tissue")
+  tissue_exp <- runUMAP(tissue_exp, dimred="corrected_fastMNN_tissue", name = "UMAP_fastMNN_tissue")
   plotReducedDim(tissue_exp, dimred="UMAP_fastMNN_tissue", colour_by = "Mito_percent", text_by = "cluster_tissue") +
     scale_fill_viridis_c(option = "B") +
     ggsave(paste0(i, "/UMAP_corrected_with_clusters_Mito_", i, ".pdf"))
@@ -180,7 +182,7 @@ for(i in unique(filtered_exp$Tissue)) {
     scale_fill_viridis_d(option = "D") +
     ggsave(paste0(i, "/UMAP_corrected_with_clusters_", i, ".pdf"))
   
-  phate.out <- phate(Matrix::t(assay(tissue_exp, "reconstructed_logestimate_tissue"))) # Runs PHATE diffusion map
+  phate.out <- phate(Matrix::t(assay(tissue_exp, "reconstructed_fastMNN_tissue"))) # Runs PHATE diffusion map
   reducedDim(tissue_exp, "PHATE_fastMNN_tissue") <- phate.out$embedding
   plotReducedDim(tissue_exp, dimred="PHATE_fastMNN_tissue", colour_by = "Mito_percent", text_by = "cluster_tissue") +
     scale_fill_viridis_c(option = "B") +
@@ -207,5 +209,4 @@ for(i in unique(filtered_exp$Tissue)) {
   } else {
     saveRDS(tissue_exp, paste0(i, "/Prefiltered_experiment_all_merge_cluster_wCC_", i, ".rds"))
   }
-  
-}
+  }

@@ -66,11 +66,11 @@ reducedDim(filtered_exp, "PCA") <- PCA50
 
 # filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
 
-snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20)
+snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20, type = "jaccard")
 clusters <- igraph::cluster_louvain(snn.gr)$membership
 uncorrected_tab <- table(Cluster=clusters, Batch=filtered_exp$Sample)
-write.csv(uncorrected_tab, "Uncorrected_batch_cell_cluster_membership.csv")
-uncorrected_tab
+write.csv(round(uncorrected_tab/colSums(uncorrected_tab)*100), "Uncorrected_batch_cell_cluster_membership.csv")
+round(uncorrected_tab/colSums(uncorrected_tab)*100)
 
 # Visualise uncorrected clusters using PCA, UMAP and PHATE
 filtered_exp$uncorrected_cluster <- factor(clusters)
@@ -121,11 +121,11 @@ fastMNN.sce <- fastMNN(filtered_exp,
                        batch = filtered_exp$Sample,
                        merge.order = merge_order)
 
-snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20)
+snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20, type = "jaccard")
 clusters <- igraph::cluster_louvain(snn.gr)$membership
 corrected_tab <- table(Cluster=clusters, Batch=fastMNN.sce$batch)
-write.csv(corrected_tab, "Corrected_batch_cell_cluster_membership.csv")
-corrected_tab
+write.csv(round(corrected_tab/colSums(corrected_tab)*100), "Corrected_batch_cell_cluster_membership.csv")
+round(corrected_tab/colSums(corrected_tab)*100)
 
 colSums(metadata(fastMNN.sce)$merge.info$lost.var)
 
