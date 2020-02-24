@@ -107,10 +107,22 @@ raw_experiment$Genes_detected <- stats$detected
 raw_experiment$Mito_percent <- stats$subsets_Mito_percent
 
 # Plot QC stats
+
+ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size)) +
+  geom_histogram() +
+  theme_minimal() +
+  ggsave("Library_size_histogram_raw_total.pdf", useDingbats = FALSE)
+
 ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Library_size_ridge_raw.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size)) +
+  geom_histogram() +
+  xlim(0, 10000) +
+  theme_minimal() +
+  ggsave("Library_size_histogram_raw_total_10000.pdf", useDingbats = FALSE)
 
 ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
@@ -118,16 +130,44 @@ ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill =
   theme_minimal() +
   ggsave("Library_size_ridge_raw_10000.pdf", useDingbats = FALSE)
 
+ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size)) +
+  geom_histogram() +
+  xlim(10000, 80000) +
+  theme_minimal() +
+  ggsave("Library_size_histogram_raw_total_80000.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
+  geom_density_ridges() +
+  xlim(10000, 80000) +
+  theme_minimal() +
+  ggsave("Library_size_ridge_raw_80000.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected)) +
+  geom_histogram() +
+  theme_minimal() +
+  ggsave("Number_of_genes_histogram_raw_total.pdf", useDingbats = FALSE)
+
 ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
   ggsave("Number_of_genes_ridge_raw.pdf", useDingbats = FALSE)
 
+ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected)) +
+  geom_histogram() +
+  xlim(0, 1500) +
+  theme_minimal() +
+  ggsave("Number_of_genes_histogram_raw_total_1500.pdf", useDingbats = FALSE)
+
 ggplot(data.frame(colData(raw_experiment)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
-  xlim(0, 2000) +
+  xlim(0, 1500) +
   theme_minimal() +
-  ggsave("Number_of_genes_ridge_raw_2000.pdf", useDingbats = FALSE)
+  ggsave("Number_of_genes_ridge_raw_1500.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent)) +
+  geom_histogram() +
+  theme_minimal() +
+  ggsave("Mito_percent__histogram_raw_total.pdf", useDingbats = FALSE)
 
 ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
@@ -136,15 +176,27 @@ ggplot(data.frame(colData(raw_experiment)), aes(x = Mito_percent, y = Sample, fi
 
 ggplot(data.frame(colData(raw_experiment)), aes(x=Lib_size, y=Genes_detected)) +
   geom_hex(bins = 70) +
-  scale_fill_continuous(type = "viridis") +
+  scale_color_viridis_c(option = "D") +
   theme_bw() +
-  ggsave("Genes_vs_lib_size_density.pdf", useDingbats = FALSE)
+  ggsave("Lib_size_vs_genes_density_raw_total.pdf", useDingbats = FALSE)
 
-ggplot(data.frame(colData(filtered_exp)), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
+ggplot(data.frame(colData(raw_experiment)), aes(x=Genes_detected, y=Mito_percent)) +
+  geom_hex(bins = 70) +
+  scale_color_viridis_c(option = "D") +
+  theme_bw() +
+  ggsave("Genes_vs_mito_density_raw_total.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x=Mito_percent, y=Lib_size)) +
+  geom_hex(bins = 70) +
+  scale_color_viridis_c(option = "D") +
+  theme_bw() +
+  ggsave("Lib_size_vs_mito_density_raw_total.pdf", useDingbats = FALSE)
+
+ggplot(data.frame(colData(raw_experiment)), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
   geom_point() +
   scale_color_viridis_c(option = "D") +
   theme_bw() +
-  ggsave("Genes_vs_lib_size_vs_mito_dotplot.pdf", useDingbats = FALSE)
+  ggsave("Genes_vs_lib_size_vs_mito_raw_dotplot.pdf", useDingbats = FALSE)
 
 # Save practice dataset (5% of cells from each sample)
 raw_experiment$cellIDs <- rownames((colData(raw_experiment)))
