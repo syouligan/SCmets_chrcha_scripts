@@ -39,7 +39,7 @@ filtered_exp$CC.S <- cyc.values$normalized.scores$S
 filtered_exp$CC.G2M <- cyc.values$normalized.scores$G2M
 
 # Plot clusters annotated with CC phase
-plotReducedDim(filtered_exp, dimred="corrected_logestimate", colour_by = "CC.Phase", text_by = "cluster") +
+plotReducedDim(filtered_exp, dimred="corrected_fastMNN", colour_by = "CC.Phase", text_by = "cluster") +
   scale_fill_viridis_d(option = "D") +
   ggsave("Fastmnn_corrected_with_clusters_cell.cycle.phase.pdf")
 plotReducedDim(filtered_exp, dimred="UMAP_fastMNN", colour_by = "CC.Phase", text_by = "cluster") +

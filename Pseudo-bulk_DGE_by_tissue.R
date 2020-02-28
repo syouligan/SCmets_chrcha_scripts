@@ -6,10 +6,10 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data/pseudo-bulk_DGE") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data")
   place <- "wolfpack"
 }
 
@@ -91,5 +91,5 @@ for(i in 1:nrow(comparisons)) {
   summary(DEG3)
   results <- data.frame(topTreat(lbFit3, coef = 5, n = Inf, p.value = Inf))
   
-  write.csv(results, paste0(tissue1, "_", tissue2, "_DEG_0.5LFC.csv"))
+  write.csv(results, paste0("pseudo-bulk_DGE/", tissue1, "_", tissue2, "_DEG_0.5LFC.csv"))
 }
