@@ -32,7 +32,7 @@ if(place == "local") {
 
 # Assign cell cycle phases using Cyclone
 hs.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package="scran"))
-cyc.values <- cyclone(filtered_exp, hs.pairs, gene.names = rowData(filtered_exp)$Ensembl)
+cyc.values <- cyclone(filtered_exp, hs.pairs, gene.names = rowData(filtered_exp)$Ensembl, BPPARAM  = MulticoreParam())
 filtered_exp$CC.Phase <- cyc.values$phases
 filtered_exp$CC.G1 <- cyc.values$normalized.scores$G1
 filtered_exp$CC.S <- cyc.values$normalized.scores$S
