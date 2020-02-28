@@ -31,7 +31,7 @@ if(place == "local") {
 }
 
 # Find markers between each cluster and save a csv
-markers.filtered_exp <- findMarkers(filtered_exp, test="wilcox", filtered_exp$cluster, direction="up", block = filtered_exp$Sample, BPPARAM  = MulticoreParam(), pval.type = "some")
+markers.filtered_exp <- findMarkers(filtered_exp, test="wilcox", filtered_exp$cluster, direction="up", block = filtered_exp$Sample, pval.type = "some")
 for(i in names(markers.filtered_exp)){
   interesting <- markers.filtered_exp[[i]]
   write.csv(interesting, paste0("markers/Cluster_", i, "_markers.csv"))
