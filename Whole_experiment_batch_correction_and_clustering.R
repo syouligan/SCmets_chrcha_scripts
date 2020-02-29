@@ -39,7 +39,7 @@ if(place == "local") {
 filtered_exp <- multiBatchNorm(filtered_exp, batch=filtered_exp$Sample, min.mean = 0.1, normalize.all = TRUE)
 
 # Select HVG based on combined variance across all samples
-filtered_exp.dec <- modelGeneVarByPoisson(filtered_exp, block = filtered_exp$Sample, BPPARAM  = MulticoreParam())
+filtered_exp.dec <- modelGeneVarByPoisson(filtered_exp, block = filtered_exp$Sample)
 HVG <- getTopHVGs(filtered_exp.dec, n = 5000)
 rowData(filtered_exp)$bio_var <- filtered_exp.dec$bio
 rowData(filtered_exp)$bio_var_FDR <- filtered_exp.dec$FDR
@@ -55,7 +55,7 @@ multiPCA <- multiBatchPCA(filtered_exp,
                           get.all.genes = TRUE,
                           preserve.single = TRUE,
                           get.variance = TRUE,
-                          BSPARAM=BiocSingular::IrlbaParam(deferred=TRUE), BPPARAM  = MulticoreParam()) # PCs used later for reducedMNN
+                          BSPARAM=BiocSingular::IrlbaParam(deferred=TRUE)) # PCs used later for reducedMNN
 
 PCA50 <- as.matrix(data.frame((multiPCA@listData)))
 colnames(PCA50) <- paste0("PC", 1:50)
@@ -64,7 +64,7 @@ reducedDim(filtered_exp, "PCA") <- PCA50
 
 # filtered_exp <- denoisePCA(filtered_exp, technical=filtered_exp.dec, subset.row=HVG) # Keep PCs which associated with significant biological variation
 
-snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20, type = "jaccard", BPPARAM  = MulticoreParam())
+snn.gr <- buildSNNGraph(filtered_exp, use.dimred="PCA", k=20, type = "jaccard")
 clusters <- igraph::cluster_louvain(snn.gr)$membership
 uncorrected_tab <- table(Cluster=clusters, Batch=filtered_exp$Sample)
 write.csv(round(uncorrected_tab/colSums(uncorrected_tab)*100), "Uncorrected_batch_cell_cluster_membership.csv")
@@ -103,7 +103,7 @@ fastMNN.sce <- fastMNN(filtered_exp,
                        merge.order = merge_order,
                        BPPARAM  = MulticoreParam())
 
-snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20, type = "jaccard", BPPARAM  = MulticoreParam())
+snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20, type = "jaccard")
 clusters <- igraph::cluster_louvain(snn.gr)$membership
 corrected_tab <- table(Cluster=clusters, Batch=fastMNN.sce$batch)
 write.csv(round(corrected_tab/colSums(corrected_tab)*100), "Corrected_batch_cell_cluster_membership.csv")
