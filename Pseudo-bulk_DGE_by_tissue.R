@@ -86,10 +86,10 @@ for(i in 1:nrow(comparisons)) {
   lbFit <- lmFit(allDGEList, design)
   
   # Identify differentially expressed genes at 0 LFC threshold.
-  lbFit3 <- treat(lbFit, lfc = 0.5)
+  lbFit3 <- treat(lbFit, lfc = 0)
   DEG3 <- decideTests(lbFit3)
   summary(DEG3)
   results <- data.frame(topTreat(lbFit3, coef = 5, n = Inf, p.value = Inf))
   
-  write.csv(results, paste0("pseudo-bulk_DGE/", tissue1, "_", tissue2, "_DEG_0.5LFC.csv"))
+  write.csv(results, paste0("pseudo-bulk_DGE/", tissue1, "_", tissue2, "_DEG_0LFC.csv"))
 }

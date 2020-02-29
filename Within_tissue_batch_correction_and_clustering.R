@@ -40,9 +40,7 @@ for(i in unique(filtered_exp$Tissue)) {
   tissue_exp <- filtered_exp[,filtered_exp$Tissue == i]
   
   # Normalised to adjust for differences in library depth
-  clusters <- quickCluster(tissue_exp)
-  tissue_exp <- computeSumFactors(tissue_exp, clusters=clusters, min.mean = 0.1)
-  tissue_exp <- logNormCounts(tissue_exp)
+  filtered_exp <- multiBatchNorm(tissue_exp, batch=tissue_exp$Sample, min.mean = 0.1, normalize.all = TRUE)
   
   # Select HVG based on combined variance across all samples
   tissue_exp.dec <- modelGeneVarByPoisson(tissue_exp, block = tissue_exp$Sample)

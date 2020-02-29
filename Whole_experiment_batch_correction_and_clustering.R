@@ -36,9 +36,7 @@ if(place == "local") {
 }
 
 # Normalised to adjust for differences in library depth
-clusters <- quickCluster(filtered_exp, BPPARAM  = MulticoreParam())
-filtered_exp <- computeSumFactors(filtered_exp, clusters=clusters, min.mean = 0.1, BPPARAM  = MulticoreParam())
-filtered_exp <- logNormCounts(filtered_exp)
+filtered_exp <- multiBatchNorm(filtered_exp, batch=filtered_exp$Sample, min.mean = 0.1, normalize.all = TRUE)
 
 # Select HVG based on combined variance across all samples
 filtered_exp.dec <- modelGeneVarByPoisson(filtered_exp, block = filtered_exp$Sample, BPPARAM  = MulticoreParam())
