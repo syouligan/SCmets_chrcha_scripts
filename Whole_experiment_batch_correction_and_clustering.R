@@ -100,8 +100,7 @@ fastMNN.sce <- fastMNN(filtered_exp,
                        k=20,
                        correct.all = TRUE,
                        batch = filtered_exp$Sample,
-                       merge.order = merge_order,
-                       BPPARAM  = MulticoreParam())
+                       merge.order = merge_order)
 
 snn.gr <- buildSNNGraph(fastMNN.sce, use.dimred = "corrected", k=20, type = "jaccard")
 clusters <- igraph::cluster_louvain(snn.gr)$membership
