@@ -8,11 +8,9 @@
 if(dir.exists("/Users/mac/cloudstor/")) {
   setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
-  ncores <- 3
 } else {
   setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data")
   place <- "wolfpack"
-  ncores <- 24
 }
 
 # Libraries
@@ -28,10 +26,7 @@ library('Matrix')
 library('phateR')
 
 set.seed(100)
-library(future)
-library(future.apply)
-plan("multiprocess", workers = ncores)
-options(future.globals.maxSize = 20000*1024^2)
+options(future.globals.maxSize = 200000*1024^2)
 
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
