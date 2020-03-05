@@ -36,7 +36,7 @@ if(place == "local") {
 rowData(filtered_exp)$EntrezID <- mapIds(org.Hs.eg.db, keys=rowData(filtered_exp)$Ensembl, column="ENTREZID", keytype="ENSEMBL", multiVals="first")
 
 # Find conservative markers between each cluster and save a csv
-markers.filtered_exp <- findMarkers(filtered_exp, test="wilcox", filtered_exp$cluster, direction="up", block = filtered_exp$Sample, pval.type = "all")
+markers.filtered_exp <- findMarkers(filtered_exp, test="wilcox", filtered_exp$cluster, direction="up", block = filtered_exp$Sample, pval.type = "all", row.data = rowData(filtered_exp))
 for(i in names(markers.filtered_exp)){
   dir.create(paste0("markers/Cluster_", i))
   interesting <- markers.filtered_exp[[i]]
