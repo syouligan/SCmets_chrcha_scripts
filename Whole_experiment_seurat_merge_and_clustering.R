@@ -41,15 +41,15 @@ filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Sample") # spl
 
 # Normalise transform counts within each experiment
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = FALSE, vars.to.regress = "nCount_RNA")
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = "nCount_RNA")
 }
 
 # Integrate datasets based on highly correlated features
 filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 3000)
 filtered_exp.list <- PrepSCTIntegration(object.list = filtered_exp.list, verbose = TRUE, anchor.features = filtered_exp.features)
-filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = FALSE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
-filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = FALSE, reduction = "rpca")
-filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = FALSE)
+# filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
+filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "cca", reference = which(names(filtered_exp.list) == c("LN_1", "Liver_1", "Lung_1", "Primary_1")))
+filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 
 # Run PCA on intergated dataset and determine clusters
 filtered_exp.integrated <- RunPCA(filtered_exp.integrated, npcs = 50, ndims.print = 1:5, nfeatures.print = 5)
