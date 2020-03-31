@@ -41,7 +41,65 @@ for(i in names(markers.filtered_exp)){
   dir.create(paste0("markers/Cluster_", i))
   interesting <- markers.filtered_exp[[i]]
   write.csv(interesting, paste0("markers/Cluster_", i,"/Cluster_", i, "_conservative_markers.csv"))
-}
+
+  # Perform GO enrichment analysis
+  BPenrich <- enrichGO(interesting[interesting$FDR < 0.05, "Ensembl"],
+                       OrgDb = org.Hs.eg.db,
+                       keyType = "ENSEMBL",
+                       ont = "BP",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "bonferroni",
+                       minGSSize = 10,
+                       maxGSSize = 500,
+                       readable = TRUE,
+                       universe = interesting[, "Ensembl"])
+  GOBP_GOI <- as.data.frame(BPenrich@result)
+  write.csv(GOBP_GOI, paste0("markers/Cluster_", i,"/GOBP_conservative_markers_up_Cluster_", i, ".csv"))
+  
+  MFenrich <- enrichGO(interesting[interesting$FDR < 0.05, "Ensembl"],
+                       OrgDb = org.Hs.eg.db,
+                       keyType = "ENSEMBL",
+                       ont = "MF",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "bonferroni",
+                       minGSSize = 10,
+                       maxGSSize = 500,
+                       readable = TRUE,
+                       universe = interesting[, "Ensembl"])
+  GOMF_GOI <- as.data.frame(MFenrich@result)
+  write.csv(GOMF_GOI, paste0("markers/Cluster_", i,"/GOMF_conservative_markers_up_Cluster_", i, ".csv"))
+  
+  CCenrich <- enrichGO(interesting[interesting$FDR < 0.05, "Ensembl"],
+                       OrgDb = org.Hs.eg.db,
+                       keyType = "ENSEMBL",
+                       ont = "CC",
+                       pvalueCutoff = 0.05,
+                       pAdjustMethod = "bonferroni",
+                       minGSSize = 10,
+                       maxGSSize = 500,
+                       readable = TRUE,
+                       universe = interesting[, "Ensembl"])
+  GOCC_GOI <- as.data.frame(CCenrich@result)
+  write.csv(GOCC_GOI, paste0("markers/Cluster_", i,"/GOCC_conservative_markers_up_Cluster_", i, ".csv"))
+  
+  # Perform KEGG enrichment analysis
+  KEGGenrichsig <- enrichKEGG(interesting[interesting$FDR < 0.05, "EntrezID"],
+                              organism = "hsa",
+                              keyType = "kegg",
+                              pvalueCutoff = 0.05,
+                              pAdjustMethod = "bonferroni",
+                              universe = interesting[, "EntrezID"])
+  write.csv(KEGGenrichsig, paste0("markers/Cluster_", i,"/KEGG_conservative_markers_up_Cluster_", i, ".csv"))
+  
+  # Perform REACTOME enrichment analysis
+  REACTOMEenrichsig <- enrichPathway(interesting[interesting$FDR < 0.05, "EntrezID"],
+                                     organism = "human",
+                                     pvalueCutoff = 0.05,
+                                     pAdjustMethod = "bonferroni",
+                                     readable = TRUE,
+                                     universe = interesting[, "EntrezID"])
+  write.csv(REACTOMEenrichsig, paste0("markers/Cluster_", i,"/Reactome_conservative_markers_up_Cluster_", i, ".csv"))
+  }
 
 # Find markers between each cluster and save a csv
 # Genes up regulated in each cluster

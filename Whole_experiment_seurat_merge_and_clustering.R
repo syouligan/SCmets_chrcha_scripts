@@ -35,13 +35,19 @@ if(place == "local") {
   filtered_exp <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/Prefiltered_experiment_all_merge_cluster_wCC.rds") # uses whole dataset if wolfpack
 }
 
-# Set up prefiltered object, normalise transform and scale counts
+# Set up prefiltered object, add cell cycle difference info and split by sample
 filtered_exp_seurat <- as.Seurat(filtered_exp, counts = "counts", data = NULL) # convert to Seurat
+
+s.genes <- cc.genes$s.genes
+g2m.genes <- cc.genes$g2m.genes
+filtered_exp_seurat <- CellCycleScoring(filtered_exp_seurat, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+filtered_exp_seurat$CC.Difference <- filtered_exp_seurat$S.Score - filtered_exp_seurat$G2M.Score
+
 filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Sample") # split into individual samples
 
 # Normalise transform counts within each experiment
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = "nCount_RNA")
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "CC.Difference", "Mito_percent"))
 }
 
 # Integrate datasets based on highly correlated features
@@ -62,7 +68,7 @@ filtered_exp.integrated_sce <- as.SingleCellExperiment(filtered_exp.integrated)
 reducedDim(filtered_exp, "PCA_seurat") <- reducedDim(filtered_exp.integrated_sce, "PCA")
 filtered_exp$seurat_clusters <- filtered_exp.integrated_sce$ident
 
-phate.out <- phate(Matrix::t(assay(filtered_exp.integrated_sce, "logcounts"))) # Runs PHATE diffusion map
+phate.out <- phate(Matrix::t(assay(filtered_exp.integrated_sce, "logcounts")), ndim = 10) # Runs PHATE diffusion map
 reducedDim(filtered_exp, "PHATE_seurat") <- phate.out$embedding
 filtered_exp <- runUMAP(filtered_exp, dimred = "PCA_seurat", name = "UMAP_seurat")
 
@@ -92,58 +98,6 @@ for(i in c("PCA_seurat", "UMAP_seurat", "PHATE_seurat")){
     scale_fill_viridis_d(option = "B") +
     ggsave(paste0(i, "_seurat_with_seurat_clusters.pdf"))
 }
-
-# Make dataframe used for plotting
-# --------------------------------------------------------------------------
-
-plotting <- data.frame(reducedDim(filtered_exp, "PHATE_seurat"))
-plotting$Tissue <- filtered_exp$Tissue
-plotting$cluster <- filtered_exp$seurat_clusters
-
-# Quantitative expression
-plotting$OCT4_expression <- assay(filtered_exp, "logcounts")["POU5F2", ]
-plotting$SOX2_expression <- assay(filtered_exp, "logcounts")["SOX2", ]
-
-# Scaled expression
-plotting$OCT4_zscore <- scale(assay(filtered_exp, "logcounts")["POU5F2", ])
-plotting$SOX2_zscore <- scale(assay(filtered_exp, "logcounts")["SOX2", ])
-plotting$OCT4ySOX2_zscore <- plotting$OCT4_expression + plotting$SOX2_expression
-
-# Qualitative expression
-plotting$OCT4ySOX2_expressed <- plotting$OCT4_expression > 0 & plotting$SOX2_expression > 0
-plotting$OCT4_expressed <- plotting$OCT4_expression > 0
-plotting$SOX2_expressed <- plotting$SOX2_expression > 0
-
-# Cluster labelling
-text_out <- retrieveCellInfo(filtered_exp, "seurat_clusters", search="colData")
-text_out$val <- as.factor(text_out$val)
-by_text_x <- vapply(split(plotting$PHATE1, text_out$val), median, FUN.VALUE=0)
-by_text_y <- vapply(split(plotting$PHATE2, text_out$val), median, FUN.VALUE=0)
-
-# Plot cells within each cluster
-# --------------------------------------------------------------------------
-
-plotting_t <- plotting[plotting$OCT4ySOX2_expressed == TRUE, ]
-ggplot() +
-  geom_point(data = plotting, aes(x = PHATE1, y = PHATE2), color = "grey80") +
-  geom_point(data = plotting_t, aes(x = PHATE1, y = PHATE2, color = OCT4ySOX2_zscore)) +
-  scale_color_viridis_c(option = "C") +
-  theme(aspect.ratio = 1) +
-  theme_classic() +
-  annotate("text", x = by_text_x, y = by_text_y, label = names(by_text_x)) +
-  ggsave("select_genes/All_cells_OCT4ySOX2_scaled_all.pdf", useDingbats = FALSE)
-
-ggplot() +
-  geom_point(data = plotting, aes(x = PHATE1, y = PHATE2, color = OCT4ySOX2_expressed)) +
-  scale_color_viridis_d(option = "D") +
-  theme(aspect.ratio = 1) +
-  theme_classic() +
-  annotate("text", x = by_text_x, y = by_text_y, label = names(by_text_x)) +
-  ggsave("select_genes/All_cells_OCT4_expressed_all.pdf", useDingbats = FALSE)
-
-OCT4ySOX2_by_cluster <- table(cluster=plotting$cluster, OCT4ySOX2=plotting$OCT4ySOX2_expressed)
-round(OCT4ySOX2_by_cluster/rowSums(OCT4ySOX2_by_cluster)*100)
-OCT4ySOX2_by_cluster
 
 # Save total filtered dataset
 if(place == "local") {

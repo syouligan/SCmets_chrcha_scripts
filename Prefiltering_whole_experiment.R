@@ -26,7 +26,7 @@ library('DropletUtils')
 library('dplyr')
 library('tidyr')
 library('scater')
-library('EnsDb.Hsapiens.v75')
+library('EnsDb.Hsapiens.v86')
 library('grid')
 library('ggplot2')
 library('ggridges')
@@ -47,13 +47,25 @@ if (place == "local") {
 # --------------------------------------------------------------------------
 
 # Idenitify cells to discard based on outlier based on Lib_size, Genes_detected or >20% mitochondrial content determined using histograms of data
-raw_experiment$Mito_percent_discard <- raw_experiment$Mito_percent > 20
-sum(raw_experiment$Mito_percent_discard)
-raw_experiment$Genes_percent_discard <- raw_experiment$Genes_detected < 700
-sum(raw_experiment$Genes_percent_discard)
-raw_experiment$Libsize_percent_discard <- raw_experiment$Lib_size < 1000
-sum(raw_experiment$Libsize_percent_discard)
+location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(raw_experiment)$Ensembl, column="SEQNAME", keytype="GENEID")
+stats <- perCellQCMetrics(raw_experiment, subsets=list(Mito=which(location=="MT")))
+raw_experiment$Lib_size <- stats$sum
+raw_experiment$Genes_detected <- stats$detected
+raw_experiment$Mito_percent <- stats$subsets_Mito_percent
 
+QCLibSize <- isOutlier(stats$sum, log=TRUE, type="lower")
+attr(QCLibSize, "thresholds")
+QCdetected <- isOutlier(stats$detected, log=TRUE, type="both")
+attr(QCdetected, "thresholds")
+QCMito <- isOutlier(stats$subsets_Mito_percent, type="higher")
+attr(QCMito, "thresholds")
+
+raw_experiment$Mito_percent_discard <- isOutlier(stats$sum, log=TRUE, type="lower")
+sum(raw_experiment$Mito_percent_discard)
+raw_experiment$Genes_percent_discard <- isOutlier(stats$detected, log=TRUE, type="both")
+sum(raw_experiment$Genes_percent_discard)
+raw_experiment$Libsize_percent_discard <- isOutlier(stats$subsets_Mito_percent, type="higher")
+sum(raw_experiment$Libsize_percent_discard)
 raw_experiment$discard <- raw_experiment$Mito_percent_discard | raw_experiment$Genes_percent_discard | raw_experiment$Libsize_percent_discard
 sum(raw_experiment$discard)
 
