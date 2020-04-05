@@ -79,7 +79,7 @@ for(i in c("pca", "umap")) {
   p3 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
   p5 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
   gridit <- plot_grid(p1, p2, p3, p5)
-  ggsave(paste0("Seurat_clusters_", i, ".png", plot = gridit))
+  ggsave(paste0("Seurat_clusters_", i, ".png", plot = gridit), device = "png")
 }
 
 # Run PHATE on intergated dataset and determine clusters using kmeans
@@ -101,7 +101,7 @@ for(i in c("pca", "umap", "phate")) {
   p3 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
   p5 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
   gridit <- plot_grid(p1, p2, p3, p5)
-  ggsave(paste0("PHATE_clusters_", i, ".png", plot = gridit))
+  ggsave(paste0("PHATE_clusters_", i, ".png", plot = gridit), device = "png")
 }
 
 # Save seurat objects
@@ -129,10 +129,4 @@ if(place == "local") {
   saveRDS(filtered_exp.integrated, "Prefiltered_experiment_practice_seurat_integrated.rds")
 } else {
   saveRDS(filtered_exp.integrated, "Prefiltered_experiment_all_seurat_integrated.rds")
-}
-
-if(place == "local") {
-  # saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_practice_seurat_integrated_sce.rds")
-} else {
-  saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_all_seurat_integrated_sce.rds")
 }

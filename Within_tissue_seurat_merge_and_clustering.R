@@ -134,9 +134,4 @@ if(place == "local") {
   saveRDS(tissue_exp.integrated, paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds"))
 }
 
-if(place == "local") {
-  # saveRDS(tissue_exp.integrated_sce, paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_sce_", tissue,".rds"))
-} else {
-  saveRDS(tissue_exp.integrated_sce, paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_sce_", tissue,".rds"))
-}
 }
