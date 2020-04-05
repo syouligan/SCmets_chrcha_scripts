@@ -37,13 +37,6 @@ if(place == "local") {
   options(future.globals.maxSize = 200000*1024^2)
 }
 
-# Load gene activity data from bulk MDA231 transcriptomics
-if(place == "local") {
-  geneActivity <- read.csv("/Users/mac/cloudstor/sarah_projects/MDA231_bulk_chrcha/project_results/DGE/Gene_activity_table_DGE.csv", header = TRUE, row.names = 1)
-} else {
-  geneActivity <- read.csv("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/DGE/Gene_activity_table_DGE.csv", header = TRUE, row.names = 1)
-}
-
 # Set up prefiltered object, add cell cycle difference info and split by sample
 # --------------------------------------------------------------------------
 filtered_exp_seurat <- as.Seurat(filtered_exp, counts = "counts", data = NULL) # convert to Seurat
