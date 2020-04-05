@@ -53,20 +53,22 @@ raw_experiment$Lib_size <- stats$sum
 raw_experiment$Genes_detected <- stats$detected
 raw_experiment$Mito_percent <- stats$subsets_Mito_percent
 
-QCLibSize <- isOutlier(stats$sum, log=TRUE, type="lower")
-attr(QCLibSize, "thresholds")
-QCdetected <- isOutlier(stats$detected, log=TRUE, type="both")
-attr(QCdetected, "thresholds")
-QCMito <- isOutlier(stats$subsets_Mito_percent, type="higher")
+QCMito <- isOutlier(stats$subsets_Mito_percent, type="higher", batch = raw_experiment$Sample)
 attr(QCMito, "thresholds")
 
-raw_experiment$Mito_percent_discard <- isOutlier(stats$sum, log=TRUE, type="lower")
+QCGenes <- isOutlier(stats$detected, log = TRUE, type="lower")
+attr(QCGenes, "thresholds")
+
+QCLibSize <- isOutlier(stats$sum, log = TRUE, type="lower")
+attr(QCLibSize, "thresholds")
+
+raw_experiment$Mito_percent_discard <- isOutlier(stats$subsets_Mito_percent, type="higher", batch = raw_experiment$Sample)
 sum(raw_experiment$Mito_percent_discard)
-raw_experiment$Genes_percent_discard <- isOutlier(stats$detected, log=TRUE, type="both")
-sum(raw_experiment$Genes_percent_discard)
-raw_experiment$Libsize_percent_discard <- isOutlier(stats$subsets_Mito_percent, type="higher")
-sum(raw_experiment$Libsize_percent_discard)
-raw_experiment$discard <- raw_experiment$Mito_percent_discard | raw_experiment$Genes_percent_discard | raw_experiment$Libsize_percent_discard
+raw_experiment$Genes_detected_discard <- isOutlier(stats$detected, log = TRUE, type="lower")
+sum(raw_experiment$Genes_detected_discard)
+raw_experiment$Libsize_discard <- isOutlier(stats$sum, log = TRUE, type="lower")
+sum(raw_experiment$Libsize_discard)
+raw_experiment$discard <- raw_experiment$Mito_percent_discard | raw_experiment$Genes_detected_discard | raw_experiment$Libsize_discard
 sum(raw_experiment$discard)
 
 filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
@@ -74,24 +76,24 @@ filtered_exp <- raw_experiment[ ,which(!raw_experiment$discard)]
 ggplot(data.frame(colData(raw_experiment[,raw_experiment$discard])), aes(x=Lib_size, y=Genes_detected, color = Mito_percent)) +
   geom_point() +
   scale_color_viridis_c(option = "D") +
-  theme_bw() +
-  ggsave("Genes_vs_lib_size_vs_mito_discarded_dotplot.pdf", useDingbats = FALSE)
+  theme_minimal() +
+  ggsave("Genes_vs_lib_size_vs_mito_discarded_dotplot.png")
 
 # Plot QC stats
 ggplot(data.frame(colData(filtered_exp)), aes(x = Lib_size, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Library_size_ridge_filtered_QC.pdf", useDingbats = FALSE)
+  ggsave("Library_size_ridge_filtered_QC.png")
 
 ggplot(data.frame(colData(filtered_exp)), aes(x = Genes_detected, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Number_of_genes_ridge_filtered_QC.pdf", useDingbats = FALSE)
+  ggsave("Number_of_genes_ridge_filtered_QC.png")
 
 ggplot(data.frame(colData(filtered_exp)), aes(x = Mito_percent, y = Sample, fill = Tissue)) +
   geom_density_ridges() +
   theme_minimal() +
-  ggsave("Mito_percent_ridge_filtered_QC.pdf", useDingbats = FALSE)
+  ggsave("Mito_percent_ridge_filtered_QC.png")
 
 # Remove genes without counts in at least 3 cells in each samples for any tissue
 tmp_structure <- data.frame(unique(colData(filtered_exp)[ ,c("Tissue", "Sample")]))
@@ -124,8 +126,8 @@ ggplot(data=cells_before_QC, aes(x=Var1, y=Freq)) +
   ggtitle("Cells before QC") +
   scale_color_viridis(discrete=TRUE) +
   coord_flip() +
-  theme_classic() +
-  ggsave("Cells_before_QC_barplot.pdf", useDingbats = FALSE)
+  theme_minimal() +
+  ggsave("Cells_before_QC_barplot.png")
 
 cells_remaining <- data.frame(table(filtered_exp$Sample))
 write.csv(cells_remaining, "Cells_remaining_number_QC.csv", row.names = FALSE)
@@ -134,8 +136,8 @@ ggplot(data=cells_remaining, aes(x=Var1, y=Freq)) +
   ggtitle("Cells remaining") +
   scale_color_viridis(discrete=TRUE) +
   coord_flip() +
-  theme_classic() +
-  ggsave("Cells_remaining_barplot_QC.pdf", useDingbats = FALSE)
+  theme_minimal() +
+  ggsave("Cells_remaining_barplot_QC.png")
 
 # Save datasets.
 # --------------------------------------------------------------------------

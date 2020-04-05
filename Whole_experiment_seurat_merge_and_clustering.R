@@ -24,18 +24,28 @@ library('ggplot2')
 library('readr')
 library('Matrix')
 library('phateR')
+library('cowplot')
+library('factoextra')
 
-set.seed(100)
-options(future.globals.maxSize = 200000*1024^2)
 
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
-  filtered_exp <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data/Prefiltered_experiment_practice_merge_cluster_wCC.rds") # uses practice data if local
+  filtered_exp <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data/Prefiltered_QC_experiment_practice.rds") # uses practice data if local
+  } else {
+  filtered_exp <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/Prefiltered_QC_experiment_all.rds") # uses whole dataset if wolfpack
+  set.seed(100)
+  options(future.globals.maxSize = 200000*1024^2)
+}
+
+# Load gene activity data from bulk MDA231 transcriptomics
+if(place == "local") {
+  geneActivity <- read.csv("/Users/mac/cloudstor/sarah_projects/MDA231_bulk_chrcha/project_results/DGE/Gene_activity_table_DGE.csv", header = TRUE, row.names = 1)
 } else {
-  filtered_exp <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/Prefiltered_experiment_all_merge_cluster_wCC.rds") # uses whole dataset if wolfpack
+  geneActivity <- read.csv("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/DGE/Gene_activity_table_DGE.csv", header = TRUE, row.names = 1)
 }
 
 # Set up prefiltered object, add cell cycle difference info and split by sample
+# --------------------------------------------------------------------------
 filtered_exp_seurat <- as.Seurat(filtered_exp, counts = "counts", data = NULL) # convert to Seurat
 
 s.genes <- cc.genes$s.genes
@@ -46,81 +56,90 @@ filtered_exp_seurat$CC.Difference <- filtered_exp_seurat$S.Score - filtered_exp_
 filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Sample") # split into individual samples
 
 # Normalise transform counts within each experiment
+# --------------------------------------------------------------------------
+
+# Perform SCT normalisation on each dataset individually
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "CC.Difference", "Mito_percent"))
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "S.Score", "G2M.Score", "Mito_percent"))
 }
 
 # Integrate datasets based on highly correlated features
-filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 3000)
+filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 5000)
 filtered_exp.list <- PrepSCTIntegration(object.list = filtered_exp.list, verbose = TRUE, anchor.features = filtered_exp.features)
 # filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
-filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "cca", reference = which(names(filtered_exp.list) == c("LN_1", "Liver_1", "Lung_1", "Primary_1")))
+reference_datasets <- which(names(filtered_exp.list) == "LN_3" | names(filtered_exp.list) == "Liver_3" | names(filtered_exp.list) == "Lung_3"  | names(filtered_exp.list) == "Primary_3")
+filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "cca", reference = reference_datasets)
 filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 
-# Run PCA on intergated dataset and determine clusters
-filtered_exp.integrated <- RunPCA(filtered_exp.integrated, npcs = 50, ndims.print = 1:5, nfeatures.print = 5)
-DimHeatmap(filtered_exp.integrated, dims = c(1:10), cells = 500, balanced = TRUE) +
-  ggsave("PCs_seurat_with_clusters.pdf")
+# Run PCA on intergated dataset and determine clusters using Seurat
+# --------------------------------------------------------------------------
+
+# Seurat integration pipeline
+filtered_exp.integrated <- RunPCA(filtered_exp.integrated, dims = 1:50, assay = "integrated", ndims.print = 1:5, nfeatures.print = 5)
 filtered_exp.integrated <- FindNeighbors(filtered_exp.integrated, reduction = "pca", dims = 1:50)
 filtered_exp.integrated <- FindClusters(filtered_exp.integrated)
+filtered_exp.integrated <- RunUMAP(filtered_exp.integrated, reduction = "pca", dims = 1:50)
 
-filtered_exp.integrated_sce <- as.SingleCellExperiment(filtered_exp.integrated)
-reducedDim(filtered_exp, "PCA_seurat") <- reducedDim(filtered_exp.integrated_sce, "PCA")
-filtered_exp$seurat_clusters <- filtered_exp.integrated_sce$ident
-
-phate.out <- phate(Matrix::t(assay(filtered_exp.integrated_sce, "logcounts")), ndim = 10) # Runs PHATE diffusion map
-reducedDim(filtered_exp, "PHATE_seurat") <- phate.out$embedding
-filtered_exp <- runUMAP(filtered_exp, dimred = "PCA_seurat", name = "UMAP_seurat")
-
-for(i in c("PCA_seurat", "UMAP_seurat", "PHATE_seurat")){
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "Mito_percent", text_by = "seurat_clusters") +
-    scale_fill_viridis_c(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_Mito.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "Genes_detected", text_by = "seurat_clusters") +
-    scale_fill_viridis_c(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_NGenes.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "Lib_size", text_by = "seurat_clusters") +
-    scale_fill_viridis_c(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_Lib_size.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "Tissue", text_by = "seurat_clusters") +
-    scale_fill_viridis_d(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_tissue.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "Replicate", text_by = "seurat_clusters") +
-    scale_fill_viridis_d(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_replicate.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "CC.Phase", text_by = "seurat_clusters") +
-    scale_fill_viridis_d(option = "B") +
-    ggsave(paste0(i, "_seurat_with_clusters_cell.cycle.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "cluster", text_by = "cluster") +
-    scale_fill_viridis_d(option = "B") +
-    ggsave(paste0(i, "_seurat_with_scran_clusters.pdf"))
-  plotReducedDim(filtered_exp, dimred=i, colour_by = "seurat_clusters", text_by = "seurat_clusters") +
-    scale_fill_viridis_d(option = "B") +
-    ggsave(paste0(i, "_seurat_with_seurat_clusters.pdf"))
+for(i in c("pca", "umap")) {
+  p1 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Tissue")
+  p2 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Replicate")
+  p3 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
+  p5 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
+  gridit <- plot_grid(p1, p2, p3, p5)
+  ggsave(paste0("Seurat_clusters_", i, ".png", plot = gridit))
 }
 
-# Save total filtered dataset
+# Run PHATE on intergated dataset and determine clusters using kmeans
+# --------------------------------------------------------------------------
+
+# Run phate, find number of clusters in embeddings using silhouette
+phate.out <- phate(Matrix::t(GetAssayData(filtered_exp.integrated, assay = "integrated", slot = "data")), ndim = 10) # Runs PHATE diffusion map
+filtered_exp.integrated[["phate"]] <- CreateDimReducObject(embeddings = phate.out$embedding, key = "PHATE_", assay = "integrated")
+ProjectDim(filtered_exp.integrated, reduction = "phate")
+sil.out <- fviz_nbclust(phate.out$embedding, kmeans, method = "silhouette", k.max = 25)
+sil.opt <- which(sil.out$data$y == max(sil.out$data$y))
+sil.opt
+filtered_exp.integrated$phate_clusters <- cluster_phate(phate.out, k = sil.opt, seed = 100)
+Idents(object = filtered_exp.integrated) <- 'phate_clusters'
+
+for(i in c("pca", "umap", "phate")) {
+  p1 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Tissue")
+  p2 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Replicate")
+  p3 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
+  p5 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
+  gridit <- plot_grid(p1, p2, p3, p5)
+  ggsave(paste0("PHATE_clusters_", i, ".png", plot = gridit))
+}
+
+# Save seurat objects
+# --------------------------------------------------------------------------
+
 if(place == "local") {
-  saveRDS(filtered_exp, "Prefiltered_experiment_practice_seurat_merge_cluster_sce.rds")
+  # saveRDS(phate.out, "Prefiltered_experiment_practice_phate.out.rds")
 } else {
-  saveRDS(filtered_exp, "Prefiltered_experiment_all_seurat_merge_cluster_sce.rds")
+  saveRDS(phate.out, "Prefiltered_experiment_all_phate.out.rds")
 }
 
-# Save intermediate seurat objects
 if(place == "local") {
-  saveRDS(filtered_exp.list, "Prefiltered_experiment_practice_seurat_list.rds")
+  # saveRDS(filtered_exp.list, "Prefiltered_experiment_practice_seurat_list.rds")
 } else {
   saveRDS(filtered_exp.list, "Prefiltered_experiment_all_seurat_list.rds")
 }
 
 if(place == "local") {
-  saveRDS(filtered_exp.anchors, "Prefiltered_experiment_practice_seurat_anchors.rds")
+  # saveRDS(filtered_exp.anchors, "Prefiltered_experiment_practice_seurat_anchors.rds")
 } else {
   saveRDS(filtered_exp.anchors, "Prefiltered_experiment_all_seurat_anchors.rds")
 }
 
 if(place == "local") {
-  saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_practice_seurat_integrated.rds")
+  saveRDS(filtered_exp.integrated, "Prefiltered_experiment_practice_seurat_integrated.rds")
 } else {
-  saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_all_seurat_integrated.rds")
+  saveRDS(filtered_exp.integrated, "Prefiltered_experiment_all_seurat_integrated.rds")
+}
+
+if(place == "local") {
+  # saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_practice_seurat_integrated_sce.rds")
+} else {
+  saveRDS(filtered_exp.integrated_sce, "Prefiltered_experiment_all_seurat_integrated_sce.rds")
 }
