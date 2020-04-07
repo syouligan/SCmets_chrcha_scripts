@@ -47,27 +47,33 @@ for(tissue in unique(filtered_exp$Tissue)) {
 
 tissue_exp_seurat <- as.Seurat(tissue_exp, counts = "counts", data = NULL) # convert to Seurat
 
-s.genes <- cc.genes$s.genes
-g2m.genes <- cc.genes$g2m.genes
+s.genes <- cc.genes.updated.2019$s.genes
+g2m.genes <- cc.genes.updated.2019$g2m.genes
 tissue_exp_seurat <- CellCycleScoring(tissue_exp_seurat, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 tissue_exp_seurat$CC.Difference <- tissue_exp_seurat$S.Score - tissue_exp_seurat$G2M.Score
 
 tissue_exp.list <- SplitObject(tissue_exp_seurat, split.by = "Sample") # split into individual samples
 
-# Normalise transform counts within each experiment
+# Normalise transform counts within each experiment. Note: will not overwrite if already exists.
 # --------------------------------------------------------------------------
 
-for (i in 1:length(tissue_exp.list)) {
-  print(i)
-  tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "S.Score", "G2M.Score", "Mito_percent"))
+# Integrate datasets based on highly correlated features
+if(file.exists(paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds")) & place == "wolfpack") {
+  tissue_exp.integrated <- readRDS(paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds"))
+} else if(file.exists(paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_", tissue,".rds")) & place == "local") {
+  tissue_exp.integrated <- readRDS(paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_", tissue,".rds"))
+} else {
+  # Perform SCT normalisation on each dataset individually
+  for (i in 1:length(tissue_exp.list)) {
+    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "S.Score", "G2M.Score", "Mito_percent"))
   }
-
-# Integrate datasets by tissue based on highly correlated features
-tissue_exp.features <- SelectIntegrationFeatures(object.list = tissue_exp.list, nfeatures = 5000)
-tissue_exp.list <- PrepSCTIntegration(object.list = tissue_exp.list, anchor.features = tissue_exp.features)
-# tissue_exp.list <- lapply(X = tissue_exp.list, FUN = RunPCA, verbose = TRUE, features = tissue_exp.features) # Perform PCA on each object individually (needed for rpca)
-tissue_exp.anchors <- FindIntegrationAnchors(object.list = tissue_exp.list, normalization.method = "SCT", anchor.features = tissue_exp.features, reduction = "cca")
-tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normalization.method = "SCT")
+  # Integrate  
+  tissue_exp.features <- SelectIntegrationFeatures(object.list = tissue_exp.list, nfeatures = 5000)
+  tissue_exp.list <- PrepSCTIntegration(object.list = tissue_exp.list, verbose = TRUE, anchor.features = tissue_exp.features)
+  # tissue_exp.list <- lapply(X = tissue_exp.list, FUN = RunPCA, verbose = TRUE, features = tissue_exp.features) # Perform PCA on each object individually (needed for rpca)
+  tissue_exp.anchors <- FindIntegrationAnchors(object.list = tissue_exp.list, normalization.method = "SCT", anchor.features = tissue_exp.features, verbose = TRUE, reduction = "cca")
+  tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normalization.method = "SCT", verbose = TRUE)
+}
 
 # Run PCA on intergated dataset and determine clusters using Seurat
 # --------------------------------------------------------------------------
@@ -75,8 +81,9 @@ tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normaliza
 # Seurat integration pipeline
 tissue_exp.integrated <- RunPCA(tissue_exp.integrated, dims = 1:50, assay = "integrated", ndims.print = 1:5, nfeatures.print = 5)
 tissue_exp.integrated <- FindNeighbors(tissue_exp.integrated, reduction = "pca", dims = 1:50)
-tissue_exp.integrated <- FindClusters(tissue_exp.integrated)
+tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.05)
 tissue_exp.integrated <- RunUMAP(tissue_exp.integrated, reduction = "pca", dims = 1:50)
+tissue_exp.integrated[["seurat_PCA_clusters"]] <- Idents(object = tissue_exp.integrated)
 
 for(i in c("pca", "umap")) {
   p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
@@ -93,11 +100,8 @@ for(i in c("pca", "umap")) {
 phate.out <- phate(Matrix::t(GetAssayData(tissue_exp.integrated, assay = "integrated", slot = "data")), ndim = 10) # Runs PHATE diffusion map
 tissue_exp.integrated[["phate"]] <- CreateDimReducObject(embeddings = phate.out$embedding, key = "PHATE_", assay = "integrated")
 ProjectDim(tissue_exp.integrated, reduction = "phate")
-sil.out <- fviz_nbclust(phate.out$embedding, kmeans, method = "silhouette", k.max = 25)
-sil.opt <- which(sil.out$data$y == max(sil.out$data$y))
-sil.opt
-tissue_exp.integrated$phate_clusters <- cluster_phate(phate.out, k = sil.opt, seed = 100)
-Idents(object = tissue_exp.integrated) <- 'phate_clusters'
+tissue_exp.integrated <- FindNeighbors(tissue_exp.integrated, reduction = "phate", dims = 1:10)
+tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.05)
 
 for(i in c("pca", "umap", "phate")) {
   p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
