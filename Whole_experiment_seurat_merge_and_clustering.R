@@ -111,26 +111,34 @@ for(i in c("pca", "umap", "phate")) {
 # Save seurat objects
 # --------------------------------------------------------------------------
 
-if(place == "local") {
+if(place == "local" & exists("phate.out")) {
   # saveRDS(phate.out, "Prefiltered_experiment_practice_phate.out.rds")
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(phate.out, "Prefiltered_experiment_all_phate.out.rds")
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("phate.out")) {
   # saveRDS(filtered_exp.list, "Prefiltered_experiment_practice_seurat_list.rds")
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(filtered_exp.list, "Prefiltered_experiment_all_seurat_list.rds")
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("phate.out")) {
   # saveRDS(filtered_exp.anchors, "Prefiltered_experiment_practice_seurat_anchors.rds")
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(filtered_exp.anchors, "Prefiltered_experiment_all_seurat_anchors.rds")
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("phate.out")) {
   saveRDS(filtered_exp.integrated, "Prefiltered_experiment_practice_seurat_integrated.rds")
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(filtered_exp.integrated, "Prefiltered_experiment_all_seurat_integrated.rds")
+} else {
+  print("Not overwritten")
 }

@@ -30,6 +30,10 @@ if(place == "local") {
 } else {
   filtered_exp_sce <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/Prefiltered_QC_experiment_all.rds") # uses whole dataset if wolfpack
 }
+rowData(filtered_exp_sce)$EntrezID <- mapIds(org.Hs.eg.db, keys=rowData(filtered_exp_sce)$Ensembl, column="ENTREZID", keytype="ENSEMBL", multiVals="first")
+rowMetaData <- data.frame(rowData(filtered_exp_sce))
+
+
 
 for(tissue in c("Liver", "LN", "Lung", "Primary")){
 # Load prefiltered and clustered Seurat Object
@@ -48,8 +52,6 @@ all_markers <- FindAllMarkers(tissue_exp, assay = "RNA")
 tissue_exp@misc$all_markers <- all_markers
 
 # Add Entrez IDs for KEGG and REACTOME analyses
-rowData(filtered_exp_sce)$EntrezID <- mapIds(org.Hs.eg.db, keys=rowData(filtered_exp_sce)$Ensembl, column="ENTREZID", keytype="ENSEMBL", multiVals="first")
-rowMetaData <- data.frame(rowData(filtered_exp_sce))
 tissue_exp@assays$RNA@meta.features <- merge(tissue_exp@assays$RNA@meta.features, rowMetaData, by.x = 0, by.y = 0)
 
 # Make gene universe(s)

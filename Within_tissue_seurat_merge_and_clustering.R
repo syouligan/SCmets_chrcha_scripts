@@ -114,28 +114,36 @@ for(i in c("pca", "umap", "phate")) {
 # Save seurat objects
 # --------------------------------------------------------------------------
 
-if(place == "local") {
+if(place == "local" & exists("phate.out")) {
   # saveRDS(phate.out, paste0(tissue, "/Prefiltered_experiment_practice_phate.out_", tissue,".rds"))
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(phate.out, paste0(tissue, "/Prefiltered_experiment_all_phate.out_", tissue,".rds"))
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("tissue_exp.list")) {
   # saveRDS(tissue_exp.list, paste0(tissue, "/Prefiltered_experiment_practice_seurat_list_", tissue,".rds"))
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(tissue_exp.list, paste0(tissue, "/Prefiltered_experiment_all_seurat_list_", tissue,".rds"))
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("tissue_exp.anchors")) {
   # saveRDS(tissue_exp.anchors, paste0(tissue, "/Prefiltered_experiment_practice_seurat_anchors_", tissue,".rds"))
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(tissue_exp.anchors, paste0(tissue, "/Prefiltered_experiment_all_seurat_anchors_", tissue,".rds"))
+} else {
+  print("Not overwritten")
 }
 
-if(place == "local") {
+if(place == "local" & exists("tissue_exp.integrated")) {
   saveRDS(tissue_exp.integrated, paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_", tissue,".rds"))
-} else {
+} else if(place == "wolfpack" & exists("phate.out")) {
   saveRDS(tissue_exp.integrated, paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds"))
+} else {
+  print("Not overwritten")
 }
 
 }
