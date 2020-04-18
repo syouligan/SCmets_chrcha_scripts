@@ -52,28 +52,27 @@ g2m.genes <- cc.genes.updated.2019$g2m.genes
 tissue_exp_seurat <- CellCycleScoring(tissue_exp_seurat, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 tissue_exp_seurat$CC.Difference <- tissue_exp_seurat$S.Score - tissue_exp_seurat$G2M.Score
 
+# Add score to idenitfy dying cells with low mito content (as per DOI 10.1186/s13059-019-1830-0)
+dying <- list(c("HLA-A", "HLA-B", "HLA-C", "B2M"))
+tissue_exp_seurat <- AddModuleScore(object = tissue_exp_seurat, features = dying, name = 'dying')
+
 tissue_exp.list <- SplitObject(tissue_exp_seurat, split.by = "Sample") # split into individual samples
 
 # Normalise transform counts within each experiment. Note: will not overwrite if already exists.
 # --------------------------------------------------------------------------
 
-# Integrate datasets based on highly correlated features
-if(file.exists(paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds")) & place == "wolfpack") {
-  tissue_exp.integrated <- readRDS(paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", tissue,".rds"))
-} else if(file.exists(paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_", tissue,".rds")) & place == "local") {
-  tissue_exp.integrated <- readRDS(paste0(tissue, "/Prefiltered_experiment_practice_seurat_integrated_", tissue,".rds"))
-} else {
-  # Perform SCT normalisation on each dataset individually
+# Perform SCT normalisation on each dataset individually
   for (i in 1:length(tissue_exp.list)) {
-    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("nCount_RNA", "S.Score", "G2M.Score", "Mito_percent"))
+    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
   }
-  # Integrate  
-  tissue_exp.features <- SelectIntegrationFeatures(object.list = tissue_exp.list, nfeatures = 5000)
-  tissue_exp.list <- PrepSCTIntegration(object.list = tissue_exp.list, verbose = TRUE, anchor.features = tissue_exp.features)
-  # tissue_exp.list <- lapply(X = tissue_exp.list, FUN = RunPCA, verbose = TRUE, features = tissue_exp.features) # Perform PCA on each object individually (needed for rpca)
-  tissue_exp.anchors <- FindIntegrationAnchors(object.list = tissue_exp.list, normalization.method = "SCT", anchor.features = tissue_exp.features, verbose = TRUE, reduction = "cca")
-  tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normalization.method = "SCT", verbose = TRUE)
-}
+
+# Integrate datasets based on highly correlated features
+tissue_exp.features <- SelectIntegrationFeatures(object.list = tissue_exp.list, nfeatures = 5000)
+tissue_exp.list <- PrepSCTIntegration(object.list = tissue_exp.list, verbose = TRUE, anchor.features = tissue_exp.features)
+# tissue_exp.list <- lapply(X = tissue_exp.list, FUN = RunPCA, verbose = TRUE, features = tissue_exp.features) # Perform PCA on each object individually (needed for rpca)
+reference_datasets <- which(names(filtered_exp.list) == "3")
+tissue_exp.anchors <- FindIntegrationAnchors(object.list = tissue_exp.list, normalization.method = "SCT", anchor.features = tissue_exp.features, verbose = TRUE, reduction = "cca", reference = reference_datasets)
+tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 
 # Run PCA on intergated dataset and determine clusters using Seurat
 # --------------------------------------------------------------------------
@@ -81,15 +80,18 @@ if(file.exists(paste0(tissue, "/Prefiltered_experiment_all_seurat_integrated_", 
 # Seurat integration pipeline
 tissue_exp.integrated <- RunPCA(tissue_exp.integrated, dims = 1:50, assay = "integrated", ndims.print = 1:5, nfeatures.print = 5)
 tissue_exp.integrated <- FindNeighbors(tissue_exp.integrated, reduction = "pca", dims = 1:50)
-tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.05)
+tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.01)
 tissue_exp.integrated <- RunUMAP(tissue_exp.integrated, reduction = "pca", dims = 1:50)
 tissue_exp.integrated[["seurat_PCA_clusters"]] <- Idents(object = tissue_exp.integrated)
 
 for(i in c("pca", "umap")) {
+  p1 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Tissue")
   p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
-  p3 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
-  p5 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
-  gridit <- plot_grid(p2, p3, p5)
+  p3 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("digest_stress1"), sort.cell = TRUE)
+  p4 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("dying1"), sort.cell = TRUE)
+  p5 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
+  p6 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
+  gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
   ggsave(paste0(tissue, "/Seurat_clusters_", tissue, "_", i, ".png", plot = gridit), device = "png")
 }
 
@@ -101,13 +103,17 @@ phate.out <- phate(Matrix::t(GetAssayData(tissue_exp.integrated, assay = "integr
 tissue_exp.integrated[["phate"]] <- CreateDimReducObject(embeddings = phate.out$embedding, key = "PHATE_", assay = "integrated")
 ProjectDim(tissue_exp.integrated, reduction = "phate")
 tissue_exp.integrated <- FindNeighbors(tissue_exp.integrated, reduction = "phate", dims = 1:10)
-tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.05)
+tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.01)
+phate_embed <- data.frame(Embeddings(tissue_exp.integrated, reduction = "phate"))
 
 for(i in c("pca", "umap", "phate")) {
+  p1 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Tissue")
   p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
-  p3 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
-  p5 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
-  gridit <- plot_grid(p2, p3, p5)
+  p3 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("digest_stress1"), sort.cell = TRUE)
+  p4 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("dying1"), sort.cell = TRUE)
+  p5 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
+  p6 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
+  gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
   ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png", plot = gridit), device = "png")
 }
 
@@ -145,5 +151,4 @@ if(place == "local" & exists("tissue_exp.integrated")) {
 } else {
   print("Not overwritten")
 }
-
 }

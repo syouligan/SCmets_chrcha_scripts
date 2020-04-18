@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Normalise, batch-correct and cluster cells using Seurat
+#! Normalise, batch-correct and cluster cells using Seurat (without regressing stress)
 # --------------------------------------------------------------------------
 
 # Working directory
@@ -47,7 +47,7 @@ filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Replicate") # 
 
 # Perform SCT normalisation on each dataset individually
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size"))
 }
 
 # Integrate datasets based on highly correlated features
@@ -75,8 +75,8 @@ for(i in c("pca", "umap")) {
   p4 <- FeaturePlot(filtered_exp.integrated, reduction = i, features = c("dying1"), sort.cell = TRUE)
   p5 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
   p6 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
-  gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
-  ggsave(paste0("Seurat_clusters_", i, ".png", plot = gridit), device = "png")
+  gridit <- plot_grid(p1, p2, p3, p4, p5, p6)
+  ggsave(paste0("Seurat_clusters_", i, "_no_regress_CC.png", plot = gridit), device = "png")
 }
 
 # Run PHATE on intergated dataset and determine clusters using kmeans
@@ -98,7 +98,7 @@ for(i in c("pca", "umap")) {
   p5 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
   p6 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
   gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
-  ggsave(paste0("PHATE_clusters_", i, ".png", plot = gridit), device = "png")
+  ggsave(paste0("PHATE_clusters_", i, "_no_regress_CC.png", plot = gridit), device = "png")
 }
 
 # No idea why phate needs coordinates set
@@ -112,40 +112,5 @@ for(i in c("phate")) {
   p5 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Phase")
   p6 <- DimPlot(filtered_exp.integrated, reduction = i, label = TRUE)
   gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
-  ggsave(paste0("PHATE_clusters_", i, ".png", plot = gridit), device = "png")
-}
-
-# Save seurat objects
-# --------------------------------------------------------------------------
-
-if(place == "local" & exists("phate.out")) {
-  # saveRDS(phate.out, "Prefiltered_experiment_practice_phate.out.rds")
-} else if(place == "wolfpack" & exists("phate.out")) {
-  saveRDS(phate.out, "Prefiltered_experiment_all_phate.out.rds")
-} else {
-  print("Not overwritten")
-}
-
-if(place == "local" & exists("phate.out")) {
-  # saveRDS(filtered_exp.list, "Prefiltered_experiment_practice_seurat_list.rds")
-} else if(place == "wolfpack" & exists("phate.out")) {
-  saveRDS(filtered_exp.list, "Prefiltered_experiment_all_seurat_list.rds")
-} else {
-  print("Not overwritten")
-}
-
-if(place == "local" & exists("phate.out")) {
-  # saveRDS(filtered_exp.anchors, "Prefiltered_experiment_practice_seurat_anchors.rds")
-} else if(place == "wolfpack" & exists("phate.out")) {
-  saveRDS(filtered_exp.anchors, "Prefiltered_experiment_all_seurat_anchors.rds")
-} else {
-  print("Not overwritten")
-}
-
-if(place == "local" & exists("phate.out")) {
-  saveRDS(filtered_exp.integrated, "Prefiltered_experiment_practice_seurat_tissueDGE_integrated.rds")
-} else if(place == "wolfpack" & exists("phate.out")) {
-  saveRDS(filtered_exp.integrated, "Prefiltered_experiment_all_seurat_tissueDGE_integrated.rds")
-} else {
-  print("Not overwritten")
+  ggsave(paste0("PHATE_clusters_", i, "_no_regress_CC.png", plot = gridit), device = "png")
 }
