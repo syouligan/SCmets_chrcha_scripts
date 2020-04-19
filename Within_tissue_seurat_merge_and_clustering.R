@@ -51,6 +51,9 @@ s.genes <- cc.genes.updated.2019$s.genes
 g2m.genes <- cc.genes.updated.2019$g2m.genes
 tissue_exp_seurat <- CellCycleScoring(tissue_exp_seurat, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 tissue_exp_seurat$CC.Difference <- tissue_exp_seurat$S.Score - tissue_exp_seurat$G2M.Score
+digest_stress <- list(c("FOS", "CXCL2", "ZFP36", "FOSB", "DUSP1", "ATF3", "CXCL8", "NR4A1", "CXCL3", "PPP1R15A", "JUNB", "EGR1", "HSPA1A", "HSPA1B", "SOCS3", "KLF6", "JUN", "IER2", "CXCL1", "NKFBIA", "HSPA6", "DNAJB1", "IER3", "CCNL1", "MTRNR2L2", "IER5", "ID1", "CEBPD", "KRT6A", "CYR61", "DEPP1", "CLDN4", "IRF1", "DUSP2", "BTG2", "PLAUR", "MAFF", "KLF4", "PHLDA2", "TNFAIP3"))
+tissue_exp_seurat <- AddModuleScore(object = tissue_exp_seurat, features = digest_stress, name = 'digest_stress')
+Idents(object = tissue_exp_seurat) <- "Tissue"
 
 # Add score to idenitfy dying cells with low mito content (as per DOI 10.1186/s13059-019-1830-0)
 dying <- list(c("HLA-A", "HLA-B", "HLA-C", "B2M"))
