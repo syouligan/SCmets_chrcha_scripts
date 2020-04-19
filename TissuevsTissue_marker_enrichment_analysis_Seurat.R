@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Normalise, batch-correct and cluster cells using Seurat
+#! Normalise, batch-correct and cluster cells using Seurat.
 # --------------------------------------------------------------------------
 
 # Working directory
