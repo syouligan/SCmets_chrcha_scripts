@@ -26,7 +26,9 @@ library('Matrix')
 library('phateR')
 library('cowplot')
 library('factoextra')
-
+library('clusterProfiler')
+library('ReactomePA')
+library('org.Hs.eg.db')
 
 # Load prefiltered SingleCellExperiment
 if(place == "local") {

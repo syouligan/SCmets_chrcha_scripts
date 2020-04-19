@@ -29,7 +29,9 @@ library('factoextra')
 library('gtools')
 library('doParallel')
 library('foreach')
-
+library('clusterProfiler')
+library('ReactomePA')
+library('org.Hs.eg.db')
 
 # Load prefiltered SingleCellExperiment
 if(place == "local") {
