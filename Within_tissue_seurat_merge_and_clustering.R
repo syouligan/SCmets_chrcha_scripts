@@ -51,26 +51,29 @@ s.genes <- cc.genes.updated.2019$s.genes
 g2m.genes <- cc.genes.updated.2019$g2m.genes
 tissue_exp_seurat <- CellCycleScoring(tissue_exp_seurat, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 tissue_exp_seurat$CC.Difference <- tissue_exp_seurat$S.Score - tissue_exp_seurat$G2M.Score
+digest_stress <- list(c("FOS", "CXCL2", "ZFP36", "FOSB", "DUSP1", "ATF3", "CXCL8", "NR4A1", "CXCL3", "PPP1R15A", "JUNB", "EGR1", "HSPA1A", "HSPA1B", "SOCS3", "KLF6", "JUN", "IER2", "CXCL1", "NKFBIA", "HSPA6", "DNAJB1", "IER3", "CCNL1", "MTRNR2L2", "IER5", "ID1", "CEBPD", "KRT6A", "CYR61", "DEPP1", "CLDN4", "IRF1", "DUSP2", "BTG2", "PLAUR", "MAFF", "KLF4", "PHLDA2", "TNFAIP3"))
+tissue_exp_seurat <- AddModuleScore(object = tissue_exp_seurat, features = digest_stress, name = 'digest_stress')
+Idents(object = tissue_exp_seurat) <- "Tissue"
 
 # Add score to idenitfy dying cells with low mito content (as per DOI 10.1186/s13059-019-1830-0)
 dying <- list(c("HLA-A", "HLA-B", "HLA-C", "B2M"))
 tissue_exp_seurat <- AddModuleScore(object = tissue_exp_seurat, features = dying, name = 'dying')
 
-tissue_exp.list <- SplitObject(tissue_exp_seurat, split.by = "Sample") # split into individual samples
+tissue_exp.list <- SplitObject(tissue_exp_seurat, split.by = "Replicate") # split into individual samples
 
 # Normalise transform counts within each experiment. Note: will not overwrite if already exists.
 # --------------------------------------------------------------------------
 
 # Perform SCT normalisation on each dataset individually
   for (i in 1:length(tissue_exp.list)) {
-    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
+    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
   }
 
 # Integrate datasets based on highly correlated features
 tissue_exp.features <- SelectIntegrationFeatures(object.list = tissue_exp.list, nfeatures = 5000)
 tissue_exp.list <- PrepSCTIntegration(object.list = tissue_exp.list, verbose = TRUE, anchor.features = tissue_exp.features)
 # tissue_exp.list <- lapply(X = tissue_exp.list, FUN = RunPCA, verbose = TRUE, features = tissue_exp.features) # Perform PCA on each object individually (needed for rpca)
-reference_datasets <- which(names(filtered_exp.list) == "3")
+reference_datasets <- which(names(tissue_exp.list) == "3")
 tissue_exp.anchors <- FindIntegrationAnchors(object.list = tissue_exp.list, normalization.method = "SCT", anchor.features = tissue_exp.features, verbose = TRUE, reduction = "cca", reference = reference_datasets)
 tissue_exp.integrated <- IntegrateData(anchorset = tissue_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 

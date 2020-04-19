@@ -69,7 +69,7 @@ colnames(comparisons) <- c("Tissue_1", "Tissue_2")
 rownames(comparisons) <- 1:nrow(comparisons)
 
 cores <- detectCores()
-cl <- makeCluster(cores[1]-3)
+cl <- makeCluster(round(0.5*cores[1]))
 registerDoParallel(cl)
 
 # Find markers for each comparison

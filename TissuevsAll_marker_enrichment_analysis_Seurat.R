@@ -51,8 +51,8 @@ filtered_exp@assays$RNA@meta.features <- merge(filtered_exp@assays$RNA@meta.feat
 # Add cell cycle and stress scores
 s.genes <- cc.genes.updated.2019$s.genes
 g2m.genes <- cc.genes.updated.2019$g2m.genes
-filtered_exp_seurat <- CellCycleScoring(filtered_exp_seurat, s.features = s.genes, g2m.features = g2m.genes)
-filtered_exp_seurat$CC.Difference <- filtered_exp_seurat$S.Score - filtered_exp_seurat$G2M.Score
+filtered_exp <- CellCycleScoring(filtered_exp, s.features = s.genes, g2m.features = g2m.genes)
+filtered_exp$CC.Difference <- filtered_exp$S.Score - filtered_exp$G2M.Score
 digest_stress <- list(c("FOS", "CXCL2", "ZFP36", "FOSB", "DUSP1", "ATF3", "CXCL8", "NR4A1", "CXCL3", "PPP1R15A", "JUNB", "EGR1", "HSPA1A", "HSPA1B", "SOCS3", "KLF6", "JUN", "IER2", "CXCL1", "NKFBIA", "HSPA6", "DNAJB1", "IER3", "CCNL1", "MTRNR2L2", "IER5", "ID1", "CEBPD", "KRT6A", "CYR61", "DEPP1", "CLDN4", "IRF1", "DUSP2", "BTG2", "PLAUR", "MAFF", "KLF4", "PHLDA2", "TNFAIP3"))
 filtered_exp <- AddModuleScore(object = filtered_exp, features = digest_stress, name = 'digest_stress')
 Idents(object = filtered_exp) <- "Tissue"
