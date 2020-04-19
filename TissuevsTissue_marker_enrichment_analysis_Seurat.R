@@ -69,8 +69,7 @@ colnames(comparisons) <- c("Tissue_1", "Tissue_2")
 rownames(comparisons) <- 1:nrow(comparisons)
 
 cores <- detectCores()
-cl <- makeCluster(round(0.5*cores[1]))
-registerDoParallel(cl)
+registerDoParallel(round(0.5*cores[1]))
 
 # Find markers for each comparison
 markers.filtered_exp <- foreach(x = 1:nrow(comparisons), .packages='Seurat') %dopar% {  
@@ -95,8 +94,6 @@ return(markers)
 
 names(markers.filtered_exp) <- paste0(comparisons[, 1], "_", comparisons[, 2])
 filtered_exp@misc$tissue_markers <- markers.filtered_exp
-
-stopCluster(cl)
 
 # Perfrom GO analysis of each marker list
 # --------------------------------------------------------------------------
