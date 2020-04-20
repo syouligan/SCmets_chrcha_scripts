@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Normalise, batch-correct and cluster cells using Seurat within each tissue.
+#! Normalise, batch-correct and cluster cells using Seurat within each tissue
 # --------------------------------------------------------------------------
 
 # Working directory
