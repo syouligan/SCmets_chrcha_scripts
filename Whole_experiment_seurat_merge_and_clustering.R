@@ -64,7 +64,7 @@ filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, norma
 # Seurat integration pipeline
 filtered_exp.integrated <- RunPCA(filtered_exp.integrated, dims = 1:50, assay = "integrated", ndims.print = 1:5, nfeatures.print = 5)
 filtered_exp.integrated <- FindNeighbors(filtered_exp.integrated, reduction = "pca", dims = 1:50)
-filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.05)
+filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.01)
 filtered_exp.integrated <- RunUMAP(filtered_exp.integrated, reduction = "pca", dims = 1:50)
 filtered_exp.integrated[["seurat_PCA_clusters"]] <- Idents(object = filtered_exp.integrated)
 
@@ -87,7 +87,7 @@ phate.out <- phate(Matrix::t(GetAssayData(filtered_exp.integrated, assay = "inte
 filtered_exp.integrated[["phate"]] <- CreateDimReducObject(embeddings = phate.out$embedding, key = "PHATE_", assay = "integrated")
 ProjectDim(filtered_exp.integrated, reduction = "phate")
 filtered_exp.integrated <- FindNeighbors(filtered_exp.integrated, reduction = "phate", dims = 1:10)
-filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.05)
+filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.01)
 phate_embed <- data.frame(Embeddings(filtered_exp.integrated, reduction = "phate"))
 
 for(i in c("pca", "umap")) {
