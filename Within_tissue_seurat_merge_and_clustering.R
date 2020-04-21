@@ -109,11 +109,25 @@ tissue_exp.integrated <- FindNeighbors(tissue_exp.integrated, reduction = "phate
 tissue_exp.integrated <- FindClusters(tissue_exp.integrated, resolution = 0.05)
 phate_embed <- data.frame(Embeddings(tissue_exp.integrated, reduction = "phate"))
 
-for(i in c("pca", "umap", "phate")) {
+for(i in c("pca", "umap")) {
   p1 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Tissue")
   p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
   p3 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("digest_stress1"), sort.cell = TRUE)
   p4 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("dying1"), sort.cell = TRUE)
+  p5 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
+  p6 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
+  gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
+  ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png", plot = gridit), device = "png")
+}
+
+# No idea why phate needs coordinates set
+for(i in c("phate")) {
+  p1 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Tissue")
+  p2 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Replicate")
+  p3 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("digest_stress1"), sort.cell = TRUE)
+  p3 <- p3 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
+  p4 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("dying1"), sort.cell = TRUE)
+  p4 <- p4 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
   p5 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
   p6 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
   gridit <- plot_grid(p1, p2, p3, p4, p5, p6, nrow = 3)
