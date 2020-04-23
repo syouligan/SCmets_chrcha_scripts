@@ -26,17 +26,16 @@ library('org.Hs.eg.db')
 
 # Load prefiltered and clustered Seurat Object
 if(place == "local") {
-  filtered_exp <- readRDS("Prefiltered_experiment_practice_seurat_markers_integrated.rds") # uses practice data if local
+  filtered_exp <- readRDS("Prefiltered_experiment_practice_seurat_integrated.rds") # uses practice data if local
 } else {
-  filtered_exp <- readRDS("Prefiltered_experiment_all_seurat_markers_integrated.rds") # uses whole dataset if wolfpack
+  filtered_exp <- readRDS("Prefiltered_experiment_all_seurat_integrated.rds") # uses whole dataset if wolfpack
   set.seed(100)
   options(future.globals.maxSize = 200000*1024^2)
 }
 
 # Find markers for all clusters and perform GO enrichment
 # --------------------------------------------------------------------------
-features <- as.character(unique(filtered_exp@assays$RNA@meta.features[filtered_exp@assays$RNA@meta.features$Any_Active, "Row.names"]))
-all_markers <- FindAllMarkers(filtered_exp, assay = "RNA", test.use = "LR", latent.vars = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), features = features)
+all_markers <- FindAllMarkers(filtered_exp, assay = "SCT", test.use = "LR", slot = "data", latent.vars = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
 filtered_exp@misc$all_markers <- all_markers
 
 # Make gene universe(s)
@@ -47,6 +46,7 @@ universe_entrez <- as.character(unique(filtered_exp@assays$RNA@meta.features[fil
 idx <- match(all_markers$gene, filtered_exp@assays$RNA@meta.features$Row.names)
 all_markers$Ensembl <- filtered_exp@assays$RNA@meta.features$Ensembl [idx]
 all_markers$EntrezID <- filtered_exp@assays$RNA@meta.features$EntrezID [idx]
+all_markers$GeneSymbol <- filtered_exp@assays$RNA@meta.features$GeneSymbol [idx]
 
 # Split into clusters and find GO annotations all, up or down regulated
 all_markers$Upregulated <- all_markers$avg_logFC > 0
