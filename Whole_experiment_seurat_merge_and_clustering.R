@@ -74,11 +74,11 @@ filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Replicate") # 
 
 # Perform SCT normalisation on each dataset individually
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000)
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE)
 }
 
 # Integrate datasets based on highly correlated features
-filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 5000, return.only.var.genes = FALSE)
+filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 5000)
 filtered_exp.list <- PrepSCTIntegration(object.list = filtered_exp.list, verbose = TRUE, anchor.features = filtered_exp.features)
 # filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
 reference_datasets <- which(names(filtered_exp.list) == "3")
@@ -93,7 +93,7 @@ filtered_exp.integrated <- RunPCA(filtered_exp.integrated, dims = 1:50, assay = 
 filtered_exp.integrated <- FindNeighbors(filtered_exp.integrated, reduction = "pca", dims = 1:50)
 filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.03)
 filtered_exp.integrated <- RunUMAP(filtered_exp.integrated, reduction = "pca", dims = 1:50)
-filtered_exp.integrated[["seurat_PCA_clusters"]] <- Idents(object = filtered_exp.integrated)
+filtered_exp.integrated[["whole_experiment_seurat_PCA_clusters"]] <- Idents(object = filtered_exp.integrated)
 
 # for(i in c("pca", "umap")) {
 #   p1 <- DimPlot(filtered_exp.integrated, reduction = i, group.by = "Tissue")
@@ -115,6 +115,8 @@ filtered_exp.integrated[["phate"]] <- CreateDimReducObject(embeddings = phate.ou
 ProjectDim(filtered_exp.integrated, reduction = "phate")
 filtered_exp.integrated <- FindNeighbors(filtered_exp.integrated, reduction = "phate", dims = 1:10)
 filtered_exp.integrated <- FindClusters(filtered_exp.integrated, resolution = 0.03)
+filtered_exp.integrated[["whole_experiment_PHATE_clusters"]] <- Idents(object = filtered_exp.integrated)
+
 phate_embed <- data.frame(Embeddings(filtered_exp.integrated, reduction = "phate"))
 
 for(i in c("pca", "umap")) {

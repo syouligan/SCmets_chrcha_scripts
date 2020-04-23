@@ -23,6 +23,7 @@ library('scran')
 library('clusterProfiler')
 library('ReactomePA')
 library('org.Hs.eg.db')
+library('msigdbr')
 
 # Load prefiltered and clustered Seurat Object
 if(place == "local") {
@@ -36,11 +37,12 @@ if(place == "local") {
 # Find markers for all clusters and perform GO enrichment
 # --------------------------------------------------------------------------
 all_markers <- FindAllMarkers(filtered_exp, assay = "SCT", test.use = "LR", slot = "data", latent.vars = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"))
-filtered_exp@misc$all_markers <- all_markers
+filtered_exp@misc$whole_experiment_cluster_markers <- all_markers
 
 # Make gene universe(s)
 universe <- as.character(unique(filtered_exp@assays$RNA@meta.features[filtered_exp@assays$RNA@meta.features$Any_Active, "Ensembl"]))
 universe_entrez <- as.character(unique(filtered_exp@assays$RNA@meta.features[filtered_exp@assays$RNA@meta.features$Any_Active, "EntrezID"]))
+universe_genesymbol <- as.character(unique(filtered_exp@assays$RNA@meta.features[filtered_exp@assays$RNA@meta.features$Any_Active, "GeneSymbol"]))
 
 # Add ENSEMBL gene ids to Marker dataframe
 idx <- match(all_markers$gene, filtered_exp@assays$RNA@meta.features$Row.names)
@@ -52,6 +54,10 @@ all_markers$GeneSymbol <- filtered_exp@assays$RNA@meta.features$GeneSymbol [idx]
 all_markers$Upregulated <- all_markers$avg_logFC > 0
 all_markers$Downregulated <- all_markers$avg_logFC < 0
 markers.filtered_exp <- split(all_markers, all_markers$cluster)
+
+# Makes hallmark geneset for enrichment testing
+h_df <- msigdbr(species = "Homo sapiens", category = "H")
+h_t2g <- h_df %>% dplyr::select(gs_name, human_gene_symbol) %>% as.data.frame()
 
 # All-regulated markers in each cluster
 for(i in names(markers.filtered_exp)){
@@ -98,6 +104,18 @@ for(i in names(markers.filtered_exp)){
                        universe = universe)
   GOCC_GOI <- as.data.frame(CCenrich@result)
   write.csv(GOCC_GOI, paste0("markers/Cluster_", i,"/GOCC_markers_all_Cluster_", i, ".csv"))
+  
+  # Perform HALLMARK enrichment analysis
+  HallmarkEnrich <- enricher(gene = interesting[interesting$p_val_adj < 0.05, "GeneSymbol"], 
+                             TERM2GENE = h_t2g,
+                             pvalueCutoff = 1,
+                             qvalueCutoff = 1,
+                             pAdjustMethod = "bonferroni",
+                             minGSSize = 15,
+                             maxGSSize = 500,
+                             universe = universe_genesymbol)
+  Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
+  write.csv(Hallmark_GOI, paste0("markers/Cluster_", i,"/HALLMARK_markers_all_Cluster_", i, ".csv"))
   
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$p_val_adj < 0.05, "EntrezID"],
@@ -164,6 +182,18 @@ for(i in names(markers.filtered_exp)){
   GOCC_GOI <- as.data.frame(CCenrich@result)
   write.csv(GOCC_GOI, paste0("markers/Cluster_", i,"/GOCC_markers_up_Cluster_", i, ".csv"))
   
+  # Perform HALLMARK enrichment analysis
+  HallmarkEnrich <- enricher(gene = interesting[interesting$p_val_adj < 0.05, "GeneSymbol"], 
+                             TERM2GENE = h_t2g,
+                             pvalueCutoff = 1,
+                             qvalueCutoff = 1,
+                             pAdjustMethod = "bonferroni",
+                             minGSSize = 15,
+                             maxGSSize = 500,
+                             universe = universe_genesymbol)
+  Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
+  write.csv(Hallmark_GOI, paste0("markers/Cluster_", i,"/HALLMARK_markers_up_Cluster_", i, ".csv"))
+  
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$p_val_adj < 0.05, "EntrezID"],
                               organism = "hsa",
@@ -229,6 +259,18 @@ for(i in names(markers.filtered_exp)){
   GOCC_GOI <- as.data.frame(CCenrich@result)
   write.csv(GOCC_GOI, paste0("markers/Cluster_", i,"/GOCC_markers_down_Cluster_", i, ".csv"))
   
+  # Perform HALLMARK enrichment analysis
+  HallmarkEnrich <- enricher(gene = interesting[interesting$p_val_adj < 0.05, "GeneSymbol"], 
+                             TERM2GENE = h_t2g,
+                             pvalueCutoff = 1,
+                             qvalueCutoff = 1,
+                             pAdjustMethod = "bonferroni",
+                             minGSSize = 15,
+                             maxGSSize = 500,
+                             universe = universe_genesymbol)
+  Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
+  write.csv(Hallmark_GOI, paste0("markers/Cluster_", i,"/HALLMARK_markers_down_Cluster_", i, ".csv"))
+  
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$p_val_adj < 0.05, "EntrezID"],
                               organism = "hsa",
@@ -254,4 +296,8 @@ if(place == "local") {
   saveRDS(filtered_exp, "Prefiltered_experiment_all_seurat_integrated_markers_by_cluster.rds")
 }
 
-
+if(place == "local") {
+  saveRDS(all_markers, "Whole_experiment_clusters_markers.rds")
+} else {
+  saveRDS(all_markers, "Whole_experiment_clusters_markers.rds")
+}
