@@ -57,7 +57,7 @@ h_df <- h_df[is.element(h_df$gene_symbol, rowMetaData$GeneSymbol), ]
 
 # Add rownames to hallmark lists
 idx <- match(h_df$gene_symbol, rowMetaData$GeneSymbol)
-h_df$Names <- rownames(rowMetaData) [idx]
+h_df$Names <- rowMetaData$Row.names [idx]
 
 # Split hallmark dataframe into lists of Names by geneset
 h_list <- h_df %>% split(x = .$Names, f = .$gs_name)
