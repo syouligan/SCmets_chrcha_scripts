@@ -24,6 +24,8 @@ library('clusterProfiler')
 library('ReactomePA')
 library('org.Hs.eg.db')
 library('msigdbr')
+library('gtools')
+
 
 # Load prefiltered and clustered Seurat Object
 if(place == "local") {
