@@ -49,7 +49,7 @@ colnames(comparisons) <- c("Tissue_1", "Tissue_2")
 rownames(comparisons) <- 1:nrow(comparisons)
 
 cores <- detectCores()
-registerDoParallel(round(0.5*cores[1]))
+registerDoParallel(round(0.25*cores[1]))
 
 # Find markers for each comparison
 markers.filtered_exp <- foreach(x = 1:nrow(comparisons), .packages='Seurat') %dopar% {  
