@@ -52,7 +52,8 @@ cores <- detectCores()
 registerDoParallel(round(0.25*cores[1]))
 
 # Find markers for each comparison
-markers.filtered_exp <- foreach(x = 1:nrow(comparisons), .packages='Seurat') %dopar% {  
+# markers.filtered_exp <- foreach(x = 1:nrow(comparisons), .packages='Seurat') %dopar% {  
+markers.filtered_exp <- lapply(1:nrow(comparisons), function(x) {  
 
 # Make vectors for each tissue in the comparison
 tissue1 <- comparisons[x, 1]
@@ -70,7 +71,7 @@ markers$EntrezID <- filtered_exp@assays$RNA@meta.features$EntrezID [idx]
 markers$GeneSymbol <- filtered_exp@assays$RNA@meta.features$GeneSymbol [idx]
 
 return(markers)
-}
+})
 
 names(markers.filtered_exp) <- paste0(comparisons[, 1], "_", comparisons[, 2])
 filtered_exp@misc$tissueVStissue_markers <- markers.filtered_exp
