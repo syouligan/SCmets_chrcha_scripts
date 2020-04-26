@@ -25,7 +25,8 @@ library('ReactomePA')
 library('org.Hs.eg.db')
 library('msigdbr')
 library('gtools')
-
+library('foreach')
+library('doParallel')
 
 # Load prefiltered and clustered Seurat Object
 if(place == "local") {
