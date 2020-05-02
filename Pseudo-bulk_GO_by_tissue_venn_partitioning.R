@@ -27,7 +27,6 @@ library('msigdbr')
 
 # Make list of differentially expressed genes
 liver_primary <- read.csv("pseudo-bulk_DGE/Liver_Primary_DEG_0LFC.csv", header = TRUE)
-liver_primary$GeneSymbol <- as.character(liver_primary$GeneSymbol)
 liver_primary_DGE <- liver_primary[liver_primary$adj.P.Val < 0.05 & liver_primary$logFC > 0, ]
 ln_primary <- read.csv("pseudo-bulk_DGE/LN_Primary_DEG_0LFC.csv", header = TRUE)
 ln_primary_DGE <- ln_primary[ln_primary$adj.P.Val < 0.05 & ln_primary$logFC > 0, ]

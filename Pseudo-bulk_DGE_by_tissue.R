@@ -6,10 +6,10 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/")
   place <- "wolfpack"
 }
 
@@ -27,23 +27,13 @@ library('msigdbr')
 library('org.Hs.eg.db')
 library('fgsea')
 library('data.table')
+library('sva')
 
 set.seed(100)
 
-# Load prefiltered SingleCellExperiment
-if(place == "local") {
-  filtered_exp <- readRDS("Prefiltered_QC_experiment_practice.rds") # uses practice data if local
-} else {
-  filtered_exp <- readRDS("Prefiltered_QC_experiment_all.rds") # uses whole dataset if wolfpack
-}
-
-rowData(filtered_exp)$EntrezID <- mapIds(org.Hs.eg.db, keys=as.character(rowData(filtered_exp)$Ensembl), column="ENTREZID", keytype="ENSEMBL", multiVals="first")
-
-# Sum counts across cells from each tissue within each replicate
-summed <- aggregateAcrossCells(filtered_exp, ids=DataFrame(label=filtered_exp$Tissue, sample=filtered_exp$Replicate))
-exprs <- counts(summed)
-colnames(exprs) <- unique(paste0(filtered_exp$Tissue, "_", filtered_exp$Replicate))
-exprs <- exprs[ ,order(colnames(exprs))]
+# Load Pseudo-bulk counts and row data SingleCellExperiment
+exprs <- readRDS("Pseudo-bulk_whole_experiment_all.rds") # uses whole dataset if wolfpack
+rowData_summed <- read.csv("Pseudo-bulk_rowData_all.csv", header = TRUE, row.names = 1)
 
 # Find genes detected in all replicates of a given tissue type
 active_liver <- rowSums(exprs[,1:4] >= 1) == 4
@@ -68,12 +58,14 @@ allDGEList <- calcNormFactors(allDGEList, method = "TMM")
 # Make design matrix, fit linear models, list comparisons
 type <- factor(sampleTable$sampleType)
 rep <- factor(sampleTable$sampleRep, levels = c(1:4))
-design <- model.matrix(~0 + rep + type)
+design <- model.matrix(~0 + type)
 rownames(design) <- sampleName
 allDGEList <- voom(allDGEList, design, plot = FALSE)
 
+exprs_no_batch <- removeBatchEffect(allDGEList$E, sampleRep)
+
 # Perform principal component analysis
-zscore.pca <- prcomp(t(allDGEList$E), scale = TRUE)
+zscore.pca <- prcomp(t(exprs_no_batch), scale = TRUE)
 
 # Summary of Principle Components
 PCA_summary <- summary(zscore.pca)
@@ -105,10 +97,10 @@ ggplot(PCA_stats) +
 
 # Make plots of the first two principle components
 ggplot(PCA_df, aes(x = PCA_df[,1], y = PCA_df[,2])) +
-  # stat_ellipse(data = PCA_df, aes(x = PCA_df[,1], y = PCA_df[,2], fill = Group), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
+  stat_ellipse(data = PCA_df, aes(x = PCA_df[,1], y = PCA_df[,2], fill = Group), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
   geom_point(aes(fill = Group), alpha = 0.8, size = 6, shape = 21, colour = "black") +
   geom_text(aes(label = Names), alpha = 0.8, size = 4, colour = "black") +
-  scale_fill_manual("Sample type", values = c("#fdae61", "#f46d43", "#d53e4f", "#abdda4", "#66c2a5", "#3288bd")) +
+  scale_fill_manual("Sample type", values = c("#fdae61", "#f46d43", "#d53e4f", "#3288bd")) +
   scale_x_continuous(position = "top") +
   xlab(variance_exp[1]) +
   scale_y_continuous(position = "left") +
@@ -142,12 +134,17 @@ gobp_list <- gobp_df %>% split(x = .$gene_symbol, f = .$gs_name)
 c6_df <- msigdbr(species = "Homo sapiens", category = "C6")
 c6_list <- c6_df %>% split(x = .$gene_symbol, f = .$gs_name)
 
-mdbsig <- list("Hallmark" = h_list, "PID_pathways" = pid_list, "Chem_genetic_interventions" = cgp_list, "Transcription_factors" = tft_list, "Cancer_neighbourhoods" = CGN_list, "GO_BP" = gobp_list, "Oncogenic_signatures" = c6_list)
-dir.create("pseudo-bulk_DGE/msigdb")
+metabolic_pathways <- read.csv("~/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Metabolic_pathways_genes.csv", header = TRUE)
+metabolic_pathways$Gene <- as.character(metabolic_pathways$Gene)
+metabolic_pathways$Metabolic_pathway <- as.character(metabolic_pathways$Metabolic_pathway)
+metabolic_list <- metabolic_pathways %>% split(x = .$Gene, f = .$Metabolic_pathway)
+
+mdbsig <- list("Hallmark" = h_list, "PID_pathways" = pid_list, "Chem_genetic_interventions" = cgp_list, "Transcription_factors" = tft_list, "Cancer_neighbourhoods" = CGN_list, "GO_BP" = gobp_list, "Oncogenic_signatures" = c6_list, "Metabolic_pathways" = metabolic_list)
+dir.create("msigdb")
 
 # Make table of comparisons across tissue
 comparisons <- combinations(4, 2, unique(as.character(sampleType)))
-colnames(comparisons) <- c("Tissue_1", "Tissue_2")
+colnames(comparisons) <- c("Tissue_2", "Tissue_1")
 rownames(comparisons) <- 1:nrow(comparisons)
 
 # Find DEGs for each comparison
@@ -156,10 +153,12 @@ for(i in 1:nrow(comparisons)) {
   # Make vectors for each tissue in the comparison
   tissue1 <- comparisons[i, 1]
   tissue2 <- comparisons[i, 2]
+  print(tissue1)
+  print(tissue2)
   
   # Subset expression data to those genes actively expressed in either sample type
   expression <- exprs[geneActivity[ ,tissue1] | geneActivity[ ,tissue2], c(sampleType == tissue1 | sampleType == tissue2)]
-  genes <- data.frame(rowData(filtered_exp)[is.element(rownames(rowData(filtered_exp)), rownames(expression)), ])
+  genes <- data.frame(rowData_summed[is.element(rownames(rowData_summed), rownames(expression)), ])
   
   # Make DGEList object and normalise using TMM
   allDGEList <- DGEList(counts = expression, group = sampleType[sampleType == tissue1 | sampleType == tissue2], genes = genes)
@@ -170,21 +169,21 @@ for(i in 1:nrow(comparisons)) {
   rep <- factor(sampleTable$sampleRep, levels = c(1:4))
   design <- model.matrix(~0 + rep + type)
   rownames(design) <- sampleName[sampleType == tissue1 | sampleType == tissue2]
-  allDGEList <- voom(allDGEList, design, plot = FALSE)
+  allDGEList <- voom(allDGEList, design, plot = TRUE)
 
   # Identify significantly altered mSigDB genesets
   for(sig in names(mdbsig)) {
-    camera.out <- camera(allDGEList$E, mdbsig[[sig]], design, inter.gene.cor=0.01, trend.var = TRUE)
-    write.csv(camera.out, paste0("pseudo-bulk_DGE/msigdb/", tissue1, "_", tissue2, "_", sig, "_camera.csv"))
+    camera.out <- camera(allDGEList$E, mdbsig[[sig]], design, contrast = 5, inter.gene.cor=0.01, trend.var = TRUE)
+    write.csv(camera.out, paste0("msigdb/", tissue1, "_", tissue2, "_", sig, "_camera.csv"))
   }
   
   # Identify differentially expressed genes at 0 LFC threshold.
   lbFit <- lmFit(allDGEList, design)
   lbFit3 <- treat(lbFit, lfc = 0)
   DEG3 <- decideTests(lbFit3)
-  summary(DEG3)
+  print(summary(DEG3))
   results <- data.frame(topTreat(lbFit3, coef = 5, n = Inf, p.value = Inf))
-  write.csv(results, paste0("pseudo-bulk_DGE/", tissue1, "_", tissue2, "_DEG_0LFC.csv"))
+  write.csv(results, paste0(tissue1, "_", tissue2, "_DEG_0LFC.csv"))
   
   # Perform fgsea enrichment analysis across mSigDB genesets
   interesting <- results
@@ -197,10 +196,10 @@ for(i in 1:nrow(comparisons)) {
   for(sig in names(mdbsig)) {
     fgseaRes <- fgsea(pathways = mdbsig[[sig]], 
                       stats = interesting_in_vec,
-                      minSize=15,
+                      minSize=10,
                       maxSize=500,
                       nperm=10000)
     fgseaRes <- fgseaRes[order(pval), ]
-    fwrite(fgseaRes, file=paste0("pseudo-bulk_DGE/msigdb/", tissue1, "_", tissue2, "_", sig, "_fgsea.csv"), sep=",", sep2=c("", " ", ""))
+    fwrite(fgseaRes, file=paste0("msigdb/", tissue1, "_", tissue2, "_", sig, "_fgsea.csv"), sep=",", sep2=c("", " ", ""))
   } 
 }

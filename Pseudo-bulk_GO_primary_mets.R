@@ -1,15 +1,15 @@
 #!/usr/bin/Rscript
 
 # --------------------------------------------------------------------------
-#! Look at GO terms enriched among DEGs between tissues (pseudobulk)
+#! Look at GO terms enriched among DEGs between primary and mets (pseudobulk)
 # --------------------------------------------------------------------------
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Primary-Mets/") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
-  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/")
+  setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Primary-Mets/")
   place <- "wolfpack"
 }
 
@@ -26,15 +26,8 @@ library('gplots')
 library('msigdbr')
 
 # Make list of differentially expressed genes
-liver_primary <- read.csv("Liver_Primary_DEG_0LFC.csv", header = TRUE)
-ln_primary <- read.csv("LN_Primary_DEG_0LFC.csv", header = TRUE)
-lung_primary <- read.csv("Lung_Primary_DEG_0LFC.csv", header = TRUE)
-liver_lung <- read.csv("Liver_Lung_DEG_0LFC.csv", header = TRUE)
-liver_ln <- read.csv("Liver_LN_DEG_0LFC.csv", header = TRUE)
-ln_lung <- read.csv("LN_Lung_DEG_0LFC.csv", header = TRUE)
-
-DGE_list <- list("Liver_Primary" = liver_primary, "Lung_Primary" = lung_primary, "LN_Primary" = ln_primary, "Liver_Lung" = liver_lung, "LN_Lung" = ln_lung, "Liver_LN" = liver_ln)
-
+primary_mets <- read.csv("Primary-Mets_DEG_0LFC.csv", header = TRUE)
+DGE_list <- list("Primary_metastasis" = primary_mets)
 dir.create("GO")
 
 # Makes hallmark geneset for enrichment testing
@@ -103,19 +96,19 @@ for(i in names(DGE_list)){
                              universe = interesting[, "GeneSymbol"])
   Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
   write.csv(Hallmark_GOI, paste0("GO/", i,"_HALLMARK_pseudo-bulk_up.csv"))
-
+  
   # Perform Metabolic_pathways enrichment analysis
   Metabolic_pathwaysEnrich <- enricher(gene = interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "GeneSymbol"], 
-                             TERM2GENE = metabolic_pathways,
-                             pvalueCutoff = 1,
-                             qvalueCutoff = 1,
-                             pAdjustMethod = "bonferroni",
-                             minGSSize = 10,
-                             maxGSSize = 500,
-                             universe = interesting[, "GeneSymbol"])
+                                       TERM2GENE = metabolic_pathways,
+                                       pvalueCutoff = 1,
+                                       qvalueCutoff = 1,
+                                       pAdjustMethod = "bonferroni",
+                                       minGSSize = 10,
+                                       maxGSSize = 500,
+                                       universe = interesting[, "GeneSymbol"])
   Metabolic_pathways_GOI <- as.data.frame(Metabolic_pathwaysEnrich@result)
   write.csv(Metabolic_pathways_GOI, paste0("GO/", i,"_Metabolic_pathways_pseudo-bulk_up.csv"))
-    
+  
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "EntrezID"],
                               organism = "hsa",
@@ -135,7 +128,7 @@ for(i in names(DGE_list)){
   write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_up.csv"))
 }
 
-  
+
 # Perform enrichment analysis on each element of list
 for(i in names(DGE_list)){
   interesting <- DGE_list[[i]]
@@ -224,4 +217,3 @@ for(i in names(DGE_list)){
                                      universe = interesting[, "EntrezID"])
   write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_down.csv"))
 }
-  

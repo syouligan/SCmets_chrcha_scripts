@@ -67,8 +67,27 @@ rownames(comparisons) <- 1:nrow(comparisons)
 h_df <- msigdbr(species = "Homo sapiens", category = "H")
 h_list <- h_df %>% split(x = .$human_gene_symbol, f = .$gs_name)
 
-dir.create("pseudo-bulk_DGE/hallmark")
+cgp_df <- msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CGP")
+cgp_list <- cgp_df %>% split(x = .$gene_symbol, f = .$gs_name)
 
+pid_df <- msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CP:PID")
+pid_list <- pid_df %>% split(x = .$gene_symbol, f = .$gs_name)
+
+tft_df <- msigdbr(species = "Homo sapiens", category = "C3", subcategory = "TFT")
+tft_list <- tft_df %>% split(x = .$gene_symbol, f = .$gs_name)
+
+CGN_df <- msigdbr(species = "Homo sapiens", category = "C4", subcategory = "CGN")
+CGN_list <- CGN_df %>% split(x = .$gene_symbol, f = .$gs_name)
+
+gobp_df <- msigdbr(species = "Homo sapiens", category = "C5", subcategory = "BP")
+gobp_list <- gobp_df %>% split(x = .$gene_symbol, f = .$gs_name)
+
+c6_df <- msigdbr(species = "Homo sapiens", category = "C6")
+c6_list <- c6_df %>% split(x = .$gene_symbol, f = .$gs_name)
+
+mdbsig <- list("Hallmark" = h_list, "PID_pathways" = pid_list, "Chem_genetic_interventions" = cgp_list, "Transcription_factors" = tft_list, "Cancer_neighbourhoods" = CGN_list, "GO_BP" = gobp_list, "Oncogenic_signatures" = c6_list)
+
+dir.create("pseudo-bulk_DGE/msigdb")
 # Find DEGs for each comparison
 for(i in 1:nrow(comparisons)) {
   
@@ -91,6 +110,7 @@ for(i in 1:nrow(comparisons)) {
   allDGEList <- voom(allDGEList, design, plot = FALSE)
   
   # Test gene sets
-  camera.out <- camera(allDGEList$E, h_list, design, inter.gene.cor=0.01, trend.var = TRUE)
-  write.csv(camera.out, paste0("pseudo-bulk_DGE/hallmark/", tissue1, "_", tissue2, "_hallmark_camera.csv"))
-}  
+  for(sig in names(mdbsig)) {
+    camera.out <- camera(allDGEList$E, mdbsig[[sig]], design, inter.gene.cor=0.01, trend.var = TRUE)
+    write.csv(camera.out, paste0("pseudo-bulk_DGE/msigdb/", tissue1, "_", tissue2, "_", sig, "_camera.csv"))
+}}  
