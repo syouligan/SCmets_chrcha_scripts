@@ -140,7 +140,7 @@ tissue_signatures <- lapply(X = names(tissueList), function(x){
   signature_tmp <- data.frame("Signature" = svd(tissueList[[x]])$v[,1])
   signature_tmp$Gene_name <- colnames(tissueList[[x]])
   signature_tmp$HC_Cluster <- factor(mycl[signature_tmp$Gene_name == names(mycl)])
-  signature_tmp <- signature_tmp[order(signature_tmp$Signature), , drop = FALSE]
+  signature_tmp <- signature_tmp[hr$order, ]
   signature_tmp$Gene_name <- factor(signature_tmp$Gene_name, levels = signature_tmp$Gene_name)
   return(signature_tmp)
 })
