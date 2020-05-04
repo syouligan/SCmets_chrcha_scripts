@@ -47,9 +47,8 @@ if(place == "local") {
 # --------------------------------------------------------------------------
 # Add Entrez IDs for KEGG and REACTOME analyses
 tissue_exp@assays$RNA@meta.features <- merge(tissue_exp@assays$RNA@meta.features, rowMetaData, by.x = 0, by.y = 0)
-  
-features <- as.character(unique(tissue_exp@assays$RNA@meta.features[tissue_exp@assays$RNA@meta.features$Any_Active, "Row.names"]))
-all_markers <- FindAllMarkers(tissue_exp, assay = "RNA", test.use = "LR", latent.vars = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), features = features)
+all.genes <- rownames(x = tissue_exp)
+all_markers <- FindAllMarkers(tissue_exp, assay = "SCT", test.use = "LR",  slot = "data", latent.vars = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), features = all.genes)
 tissue_exp@misc$all_markers <- all_markers
 
 # Make gene universe(s)

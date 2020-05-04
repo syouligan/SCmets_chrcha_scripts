@@ -77,124 +77,7 @@ ln_lung <- as.character(ln_lung[, "X"])
 
 total_DGE <- as.character(unique(c(liver_primary, ln_primary, lung_primary, liver_lung, ln_lung, liver_ln)))
 
-DGE_list <- list("Total" = total_DGE, "Liver_Primary" = liver_primary, "LN_Primary" = ln_primary, "Lung_Primary" = lung_primary, "Liver_Lung" = liver_lung, "LN_Lung" = ln_lung, "Liver_LN" = liver_ln)
-
-# Make heatmap of DEGs between tissues and primary tumors
-# --------------------------------------------------------------------------
-
-# Find genes detected in all replicates of a given tissue type
-active_liver <- rowSums(exprs[,1:4] >= 1) == 4
-active_LN <- rowSums(exprs[,5:8] >= 1) == 4
-active_lung <- rowSums(exprs[,9:12] >= 1) == 4
-active_primary <- rowSums(exprs[,13:16] >= 1) == 4
-geneActivity <- data.frame("Liver" = active_liver, "LN" = active_LN, "Lung" = active_lung, "Primary" = active_primary)
-
-# Make sample info table
-sampleName <- colnames(exprs)
-sampleType <- factor(c(gsub( "\\_[0-9]*$", "", sampleName)))
-sampleRep <- factor(c(gsub( "^.*?_","", sampleName)))
-sampleTable <- data.frame(sampleName, sampleType, sampleRep)
-
-# Make DGEList object and normalise using TMM
-allDGEList <- DGEList(counts = exprs, group = sampleType)
-allDGEList <- calcNormFactors(allDGEList, method = "TMM")
-
-# Make design matrix, fit linear models, list comparisons
-type <- factor(sampleTable$sampleType)
-rep <- factor(sampleTable$sampleRep, levels = c(1:4))
-design <- model.matrix(~0 + type)
-rownames(design) <- sampleName
-allDGEList <- voom(allDGEList, design, plot = FALSE)
-
-exprs_no_batch <- removeBatchEffect(allDGEList$E, sampleRep)
-
-# Perform PHATE on normalised bulk counts
-# --------------------------------------------------------------------------
-
-phate.out <- phate(Matrix::t(exprs_no_batch), ndim = 10) # Runs PHATE diffusion map
-phate.out.embed <- data.frame(phate.out$embedding)
-
-Group <- as.character(gsub( "\\_[0-9]*$", "", rownames(phate.out.embed)))
-Names <- as.character(rownames(phate.out.embed))
-phate.out.embed$Group <- factor(Group, levels = unique(Group))
-phate.out.embed$Names <- Names
-
-# Make plots of the first two principle components
-ggplot(phate.out.embed, aes(x = phate.out.embed[,1], y = phate.out.embed[,2])) +
-  stat_ellipse(data = phate.out.embed, aes(x = phate.out.embed[,1], y = phate.out.embed[,2], fill = Group), alpha = 0.3, geom = "polygon", type = "norm", level = 0.5, color = "black") +
-  geom_point(aes(fill = Group), alpha = 0.8, size = 6, shape = 21, colour = "black") +
-  geom_text(aes(label = Names), alpha = 0.8, size = 4, colour = "black") +
-  scale_fill_manual("Sample type", values = c("#fdae61", "#f46d43", "#d53e4f", "#3288bd")) +
-  scale_x_continuous(position = "top") +
-  xlab("PHATE1") +
-  scale_y_continuous(position = "left") +
-  ylab("PHATE2") +
-  theme_classic() +
-  theme(plot.title = element_blank(), axis.text = element_text(color = "black"), panel.background = element_rect(fill = "#f0f0f0"), axis.line = element_blank(), aspect.ratio = 1) +
-  ggsave("Pseudo-bulk_PHATE1_PHATE2_all.pdf")
-
-# Identify clusters of DEGs based on expression
-# --------------------------------------------------------------------------
-
-# Scale gene expression values
-zscores <- t(apply(exprs_no_batch, 1, scale))
-colnames(zscores) <- colnames(allDGEList)
-zscores <- zscores[! is.na(zscores[ ,1]), ]
-
-# Subset to GOIs
-zscores_GOI <- zscores[total_DGE, ]
-
-# Perform heirarchical clustering and return gene cluster membership
-hr <- hclust(dist(zscores_GOI))
-mycl <- cutree(hr, k = 6)
-clusterCols <- viridis(6)
-myClusterSideBar <- clusterCols[mycl]
-
-pdf(paste0("DGE_total_genes_HC_expression_heatmap.pdf"))
-heatmap.2(zscores_GOI, Rowv=TRUE, Colv="none", offsetRow = 0.01, labCol = colnames(zscores_GOI), labRow = FALSE, dendrogram="row", symm=FALSE, trace = "none", density.info = "none", breaks = seq(-2.5, 2.5, 1), col = magma(5, direction = -1), RowSideColors= myClusterSideBar)
-dev.off()
-
-# Identify clusters of DEGs based on expression
-# --------------------------------------------------------------------------
-
-zscores_GOI_annot <- data.frame(zscores_GOI)
-idx <- match(rownames(zscores_GOI_annot), rownames(rowData_summed))
-zscores_GOI_annot$Ensembl <- rowData_summed$Ensembl [idx]
-zscores_GOI_annot$EntrezID <- rowData_summed$EntrezID [idx]
-zscores_GOI_annot$GeneSymbol <- rowData_summed$GeneSymbol [idx]
-
-idx <- match(rownames(zscores_GOI_annot), names(mycl))
-zscores_GOI_annot$Cluster <- mycl [idx]
-
-# Make boxplots of z-scores in each cluster for each sample
-cluster1 <- zscores_GOI[zscores_GOI_annot$Cluster == 1, ]
-cluster2 <- zscores_GOI[zscores_GOI_annot$Cluster == 2, ]
-cluster3 <- zscores_GOI[zscores_GOI_annot$Cluster == 3, ]
-cluster4 <- zscores_GOI[zscores_GOI_annot$Cluster == 4, ]
-cluster5 <- zscores_GOI[zscores_GOI_annot$Cluster == 5, ]
-cluster6 <- zscores_GOI[zscores_GOI_annot$Cluster == 6, ]
-
-clusterList <- list("cluster1" = cluster1, "cluster2" = cluster2, "cluster3" = cluster3, "cluster4" = cluster4, "cluster5" = cluster5, "cluster6" = cluster6)
-cluster_eigengenes <- lapply(X = names(clusterList), function(x){ return(svd(clusterList[[x]])$v) })
-names(cluster_eigengenes) <- names(clusterList)
-  
-for(i in names(clusterList)) {
-  melted <- gather(data.frame(clusterList[[i]]))
-  # melted$Days <- c(rep(3, nrow(clusterList[[i]])*3), rep(14, nrow(clusterList[[i]])*3), rep(35, nrow(clusterList[[i]])*3))
-  
-  ggplot(data = melted, aes(x=key, y=value)) +
-    geom_hline(yintercept = 0) +
-    # geom_boxplot(aes(fill=factor(Days))) +
-    geom_boxplot() +
-    scale_fill_viridis_d(option = "inferno") +
-    theme_classic() +
-    ggsave(paste0("markers/HC_", i,"/Pseudo-bulk_DGE_HC_", i, "_boxplot.pdf"), useDingbats = FALSE)
-}
-
-# Identify genes most highly correlated with cluster eigengene
-
-cor_list <- lapply(names(cluster_eigengenes), function(x){apply(zscores_GOI, 1, cor, cluster_eigengenes[[x]][,1])})
-print(cor_list[[1]][order(-cor_list[[1]])][1:20])
+DGE_list <- list("Total" = total_DGE)
 
 # Make gene universe(s)
 universe <- as.character(unique(rowData_summed[rowData_summed$Any_Active, "Ensembl"]))
@@ -214,34 +97,14 @@ metabolic_pathways$Metabolic_pathway <- as.character(metabolic_pathways$Metaboli
 # --------------------------------------------------------------------------
 dir.create("markers")
 
-for(i in names(clusterList)){
+for(i in names(DGE_list)){
   dir.create(paste0("markers/HC_", i))
-  interesting <- data.frame(clusterList[[i]])
-  idx <- match(rownames(interesting), rownames(rowData_summed))
+  interesting <- data.frame(DGE_list[[i]])
+  idx <- match(interesting[,1], rownames(rowData_summed))
   interesting$Ensembl <- rowData_summed$Ensembl [idx]
   interesting$EntrezID <- rowData_summed$EntrezID [idx]
   interesting$GeneSymbol <- rowData_summed$GeneSymbol [idx]
-  correlation <- apply(zscores_GOI[rownames(interesting),], 1, cor.test, cluster_eigengenes[[i]][,1])
-  corr.df <- data.frame("correlation" = unlist(lapply(correlation, `[[`, "estimate")), row.names = names(correlation))
-  corr.df$p.value <- unlist(lapply(correlation, `[[`, "p.value"))
-  corr.df$p.adj <- p.adjust(corr.df$p.value, method = "bonf")
-  
-  idx <- match(rownames(interesting), rownames(corr.df))
-  interesting$correlation <- corr.df$correlation [idx]
-  interesting$p.value <- corr.df$p.value [idx]
-  interesting$p.adj <- corr.df$p.adj [idx]
-  interesting <- interesting[order(interesting$correlation), ]
-  write.csv(interesting, paste0("markers/HC_", i,"/HC_", i, "_markers.csv"))
-  
-  # Make heatmap
-  interesting_plot <- interesting[, ]
-  interesting_plot <- interesting_plot[order(interesting_plot$correlation),]
-  interesting_plot <- as.character(rownames(interesting_plot))
-  zscores_GOI_HC <- zscores[interesting_plot, ]
-  pdf(paste0("markers/HC_", i,"/HC_", i,"_expression_heatmap.pdf"))
-  heatmap.2(zscores_GOI_HC, Rowv=TRUE, Colv="none", offsetRow = 0.01, labCol = colnames(zscores_GOI), labRow = FALSE, dendrogram="none", symm=FALSE, trace = "none", density.info = "none", breaks = seq(-2.5, 2.5, 1), col = magma(5, direction = -1))
-  dev.off()
-  
+ 
   # All-regulated markers in each tissue
   # --------------------------------------------------------------------------
   
