@@ -33,7 +33,7 @@ liver_lung <- read.csv("Liver_Lung_DEG_0LFC.csv", header = TRUE)
 liver_ln <- read.csv("Liver_LN_DEG_0LFC.csv", header = TRUE)
 ln_lung <- read.csv("LN_Lung_DEG_0LFC.csv", header = TRUE)
 
-DGE_list <- list("Liver_Primary" = liver_primary, "Lung_Primary" = lung_primary, "LN_Primary" = ln_primary, "Liver_Lung" = liver_lung, "LN_Lung" = ln_lung, "Liver_LN" = liver_ln)
+DGE_list <- list("Liver_Primary" = liver_primary, "Lung_Primary" = lung_primary, "LN_Primary" = ln_primary)
 
 dir.create("GO")
 
@@ -59,12 +59,12 @@ for(i in names(DGE_list)){
                        ont = "BP",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOBP_GOI <- as.data.frame(BPenrich@result)
-  write.csv(GOBP_GOI, paste0("GO/", i,"_GOBP_pseudo-bulk_up.csv"))
+  write.csv(GOBP_GOI, paste0("GO/", i,"_GOBP_pseudo-bulk_down.csv"))
   
   MFenrich <- enrichGO(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "GeneSymbol"],
                        OrgDb = org.Hs.eg.db,
@@ -72,12 +72,12 @@ for(i in names(DGE_list)){
                        ont = "MF",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOMF_GOI <- as.data.frame(MFenrich@result)
-  write.csv(GOMF_GOI, paste0("GO/", i,"_GOMF_pseudo-bulk_up.csv"))
+  write.csv(GOMF_GOI, paste0("GO/", i,"_GOMF_pseudo-bulk_down.csv"))
   
   CCenrich <- enrichGO(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "GeneSymbol"],
                        OrgDb = org.Hs.eg.db,
@@ -85,12 +85,12 @@ for(i in names(DGE_list)){
                        ont = "CC",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOCC_GOI <- as.data.frame(CCenrich@result)
-  write.csv(GOCC_GOI, paste0("GO/", i,"_GOCC_pseudo-bulk_up.csv"))
+  write.csv(GOCC_GOI, paste0("GO/", i,"_GOCC_pseudo-bulk_down.csv"))
   
   # Perform HALLMARK enrichment analysis
   HallmarkEnrich <- enricher(gene = interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "GeneSymbol"], 
@@ -102,7 +102,7 @@ for(i in names(DGE_list)){
                              maxGSSize = 500,
                              universe = interesting[, "GeneSymbol"])
   Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
-  write.csv(Hallmark_GOI, paste0("GO/", i,"_HALLMARK_pseudo-bulk_up.csv"))
+  write.csv(Hallmark_GOI, paste0("GO/", i,"_HALLMARK_pseudo-bulk_down.csv"))
 
   # Perform Metabolic_pathways enrichment analysis
   Metabolic_pathwaysEnrich <- enricher(gene = interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "GeneSymbol"], 
@@ -110,11 +110,11 @@ for(i in names(DGE_list)){
                              pvalueCutoff = 1,
                              qvalueCutoff = 1,
                              pAdjustMethod = "bonferroni",
-                             minGSSize = 10,
+                             minGSSize = 15,
                              maxGSSize = 500,
                              universe = interesting[, "GeneSymbol"])
   Metabolic_pathways_GOI <- as.data.frame(Metabolic_pathwaysEnrich@result)
-  write.csv(Metabolic_pathways_GOI, paste0("GO/", i,"_Metabolic_pathways_pseudo-bulk_up.csv"))
+  write.csv(Metabolic_pathways_GOI, paste0("GO/", i,"_Metabolic_pathways_pseudo-bulk_down.csv"))
     
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "EntrezID"],
@@ -123,7 +123,7 @@ for(i in names(DGE_list)){
                               pvalueCutoff = 0.05,
                               pAdjustMethod = "bonferroni",
                               universe = interesting[, "EntrezID"])
-  write.csv(KEGGenrichsig, paste0("GO/", i,"_KEGG_pseudo-bulk_up.csv"))
+  write.csv(KEGGenrichsig, paste0("GO/", i,"_KEGG_pseudo-bulk_down.csv"))
   
   # Perform REACTOME enrichment analysis
   REACTOMEenrichsig <- enrichPathway(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC > 0, "EntrezID"],
@@ -132,7 +132,7 @@ for(i in names(DGE_list)){
                                      pAdjustMethod = "bonferroni",
                                      # readable = TRUE,
                                      universe = interesting[, "EntrezID"])
-  write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_up.csv"))
+  write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_down.csv"))
 }
 
   
@@ -149,12 +149,12 @@ for(i in names(DGE_list)){
                        ont = "BP",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOBP_GOI <- as.data.frame(BPenrich@result)
-  write.csv(GOBP_GOI, paste0("GO/", i,"_GOBP_pseudo-bulk_down.csv"))
+  write.csv(GOBP_GOI, paste0("GO/", i,"_GOBP_pseudo-bulk_up.csv"))
   
   MFenrich <- enrichGO(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "GeneSymbol"],
                        OrgDb = org.Hs.eg.db,
@@ -162,12 +162,12 @@ for(i in names(DGE_list)){
                        ont = "MF",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOMF_GOI <- as.data.frame(MFenrich@result)
-  write.csv(GOMF_GOI, paste0("GO/", i,"_GOMF_pseudo-bulk_down.csv"))
+  write.csv(GOMF_GOI, paste0("GO/", i,"_GOMF_pseudo-bulk_up.csv"))
   
   CCenrich <- enrichGO(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "GeneSymbol"],
                        OrgDb = org.Hs.eg.db,
@@ -175,12 +175,12 @@ for(i in names(DGE_list)){
                        ont = "CC",
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "bonferroni",
-                       minGSSize = 10,
+                       minGSSize = 15,
                        maxGSSize = 500,
                        # readable = TRUE,
                        universe = interesting[, "GeneSymbol"])
   GOCC_GOI <- as.data.frame(CCenrich@result)
-  write.csv(GOCC_GOI, paste0("GO/", i,"_GOCC_pseudo-bulk_down.csv"))
+  write.csv(GOCC_GOI, paste0("GO/", i,"_GOCC_pseudo-bulk_up.csv"))
   
   # Perform HALLMARK enrichment analysis
   HallmarkEnrich <- enricher(gene = interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "GeneSymbol"], 
@@ -192,7 +192,7 @@ for(i in names(DGE_list)){
                              maxGSSize = 500,
                              universe = interesting[, "GeneSymbol"])
   Hallmark_GOI <- as.data.frame(HallmarkEnrich@result)
-  write.csv(Hallmark_GOI, paste0("GO/", i,"_HALLMARK_pseudo-bulk_down.csv"))
+  write.csv(Hallmark_GOI, paste0("GO/", i,"_HALLMARK_pseudo-bulk_up.csv"))
   
   # Perform Metabolic_pathways enrichment analysis
   Metabolic_pathwaysEnrich <- enricher(gene = interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "GeneSymbol"], 
@@ -200,11 +200,11 @@ for(i in names(DGE_list)){
                                        pvalueCutoff = 1,
                                        qvalueCutoff = 1,
                                        pAdjustMethod = "bonferroni",
-                                       minGSSize = 10,
+                                       minGSSize = 15,
                                        maxGSSize = 500,
                                        universe = interesting[, "GeneSymbol"])
   Metabolic_pathways_GOI <- as.data.frame(Metabolic_pathwaysEnrich@result)
-  write.csv(Metabolic_pathways_GOI, paste0("GO/", i,"_Metabolic_pathways_pseudo-bulk_down.csv"))
+  write.csv(Metabolic_pathways_GOI, paste0("GO/", i,"_Metabolic_pathways_pseudo-bulk_up.csv"))
   
   # Perform KEGG enrichment analysis
   KEGGenrichsig <- enrichKEGG(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "EntrezID"],
@@ -213,7 +213,7 @@ for(i in names(DGE_list)){
                               pvalueCutoff = 0.05,
                               pAdjustMethod = "bonferroni",
                               universe = interesting[, "EntrezID"])
-  write.csv(KEGGenrichsig, paste0("GO/", i,"_KEGG_pseudo-bulk_down.csv"))
+  write.csv(KEGGenrichsig, paste0("GO/", i,"_KEGG_pseudo-bulk_up.csv"))
   
   # Perform REACTOME enrichment analysis
   REACTOMEenrichsig <- enrichPathway(interesting[interesting$adj.P.Val < 0.05 & interesting$logFC < 0, "EntrezID"],
@@ -222,6 +222,6 @@ for(i in names(DGE_list)){
                                      pAdjustMethod = "bonferroni",
                                      # readable = TRUE,
                                      universe = interesting[, "EntrezID"])
-  write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_down.csv"))
+  write.csv(REACTOMEenrichsig, paste0("GO/", i,"_Reactome_pseudo-bulk_up.csv"))
 }
   

@@ -40,13 +40,25 @@ if(place == "local") {
 
 # Load site specificity signatures
 if(place == "local") {
-  tissue_signatures <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Pseudo-bulk_tissue_specific_signature.csv") # uses practice data if local
+  tissue_signatures <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Pseudo-bulk_tissue_specific_signature.rds") # uses practice data if local
 } else {
-  tissue_signatures <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/pseudo-bulk_DGE/bulk_tissue_specific_signature.csv") # uses whole dataset if wolfpack
+  tissue_signatures <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/pseudo-bulk_DGE/bulk_tissue_specific_signature.rds") # uses whole dataset if wolfpack
 }
 
 # Calculate normalised, scaled counts across the whole experiment
 filtered_exp <- SCTransform(filtered_exp, verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE, new.assay.name = "SCT_whole")
+
+for(sig in names(tissue_signatures)) {
+  signature_GOIs <- as.character(tissue_signatures[[sig]]$Gene_name)[is.element(tissue_signatures[[sig]]$Gene_name, rownames(data.frame(filtered_exp@assays$SCT_whole@scale.data)))]
+  SCT_signature_GOIs <- data.frame(filtered_exp@assays$SCT_whole@scale.data)[signature_GOIs, ]
+  unique(signature_GOIs == rownames(SCT_signature_GOIs))
+  sig_tmp <- tissue_signatures[[sig]]
+  rownames(sig_tmp) <- sig_tmp$Gene_name
+  sig_tmp <- sig_tmp[rownames(SCT_signature_GOIs),]
+  correlation <- apply(SCT_signature_GOIs, 2, cor.test, sig_tmp$Signature)
+  filtered_exp[[paste0(sig, "_corr")]] <- unlist(lapply(correlation, `[[`, "estimate"))
+  filtered_exp[[paste0(sig, "_p.adj")]] <- p.adjust(unlist(lapply(correlation, `[[`, "p.value")), method = "bonf")
+}
 
 # Identify clusters within each tissue
 # --------------------------------------------------------------------------
@@ -118,8 +130,19 @@ for (tissue in names(filtered_exp.list)) {
     p6 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Lib_size"), sort.cell = TRUE)
     p7 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
     p8 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
-    gridit <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 4)
-    ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png"), plot = gridit, device = "png")
+    p9 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Liver_sig_corr"), sort.cell = TRUE)
+    p9 <- p9 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p10 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_LN_sig_corr"), sort.cell = TRUE)
+    p10  <- p10 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p11 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Lung_sig_corr"), sort.cell = TRUE)
+    p11  <- p11 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p12 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Primary_sig_corr"), sort.cell = TRUE)
+    p12  <- p12 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    gridit1 <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 4)
+    gridit2 <- plot_grid(p9, p10, p11, p12, nrow = 2)
+    
+    ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png"), plot = gridit1, device = "png")
+    ggsave(paste0(tissue, "/PHATE_specificity_", tissue, "_", i, ".png"), plot = gridit2, device = "png")
   }
   
   # No idea why phate needs coordinates set
@@ -136,8 +159,24 @@ for (tissue in names(filtered_exp.list)) {
     p6 <- p6 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
     p7 <- DimPlot(tissue_exp.integrated, reduction = i, group.by = "Phase")
     p8 <- DimPlot(tissue_exp.integrated, reduction = i, label = TRUE)
-    gridit <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 4)
-    ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png"), plot = gridit, device = "png")
+    p9 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Liver_sig_corr"), sort.cell = TRUE)
+    p9 <- p9 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p9 <- p9 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
+    p10 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_LN_sig_corr"), sort.cell = TRUE)
+    p10  <- p10 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p10 <- p10 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
+    p11 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Lung_sig_corr"), sort.cell = TRUE)
+    p11  <- p11 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p11 <- p11 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
+    p12 <- FeaturePlot(tissue_exp.integrated, reduction = i, features = c("Total_Primary_sig_corr"), sort.cell = TRUE)
+    p12  <- p12 + scale_colour_gradientn(colours = hcl.colors(7, palette = "TealRose"), limits = c(-1, 1))
+    p12 <- p12 + xlim(c(min(phate_embed$PHATE_1), max(phate_embed$PHATE_1))) + ylim(c(min(phate_embed$PHATE_2), max(phate_embed$PHATE_2)))
+    
+    gridit1 <- plot_grid(p1, p2, p3, p4, p5, p6, p7, p8, nrow = 4)
+    gridit2 <- plot_grid(p9, p10, p11, p12, nrow = 2)
+    
+    ggsave(paste0(tissue, "/PHATE_clusters_", tissue, "_", i, ".png"), plot = gridit1, device = "png")
+    ggsave(paste0(tissue, "/PHATE_specificity_", tissue, "_", i, ".png"), plot = gridit2, device = "png")
   }
   
   # Save seurat objects

@@ -76,8 +76,12 @@ ln_lung <- ln_lung[order(ln_lung$t),]
 ln_lung <- as.character(ln_lung[, "X"])
 
 total_DGE <- as.character(unique(c(liver_primary, ln_primary, lung_primary, liver_lung, ln_lung, liver_ln)))
+total_Liver <- as.character(unique(c(liver_primary, liver_lung, liver_ln)))
+total_LN <- as.character(unique(c(ln_primary, ln_lung, liver_ln)))
+total_Lung <- as.character(unique(c(lung_primary, liver_lung, ln_lung)))
+total_Primary <- as.character(unique(c(liver_primary, ln_primary, lung_primary)))
 
-DGE_list <- list("Total" = total_DGE)
+DGE_list <- list("Total" = total_DGE, "Total_Liver" = total_Liver, "Total_Lung" = total_Lung, "Total_LN" = total_LN, "Total_Primary" = total_Primary)
 
 # Make gene universe(s)
 universe <- as.character(unique(rowData_summed[rowData_summed$Any_Active, "Ensembl"]))
