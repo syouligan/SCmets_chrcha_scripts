@@ -140,9 +140,9 @@ tissue_signatures <- lapply(X = names(DGE_list), function(x){
   Tissue_Sig <- t_zscores_GOI[sampleType == gsub( "^.*?_","", x), ]
   
   # Make signature for each tissue based on SVD of DEG expression in each sample
-  signature_tmp <- data.frame("Signature" = svd(Tissue_Sig)$v[,1])
+  signature_tmp <- data.frame("Signature" = colMedians(Tissue_Sig))
   signature_tmp$Gene_name <- colnames(Tissue_Sig)
-  signature_tmp <- signature_tmp[hr$order, ]
+  signature_tmp <- signature_tmp[order(signature_tmp$Signature), ]
   signature_tmp$Gene_name <- factor(signature_tmp$Gene_name, levels = signature_tmp$Gene_name)
   return(signature_tmp)
 })
@@ -153,6 +153,7 @@ for(i in names(tissue_signatures)) {
   tissue_signatures[[i]] %>%
     ggplot(aes(x = Gene_name, y = Signature)) +
     geom_point() +
+    theme_classic() +
     ggsave(paste0("Pseudo-bulk_tissue_specific_", i, "_dotplot.pdf"), useDingbats = FALSE)
 }
 

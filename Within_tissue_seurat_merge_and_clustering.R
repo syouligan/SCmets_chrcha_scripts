@@ -20,10 +20,19 @@ library('dplyr')
 library('tidyr')
 library('scater')
 library('scran')
-library('org.Hs.eg.db')
-library('msigdbr')
-library('gtools')
+library('ggplot2')
+library('readr')
+library('Matrix')
+library('phateR')
 library('cowplot')
+library('factoextra')
+library('gtools')
+library('doParallel')
+library('foreach')
+library('clusterProfiler')
+library('ReactomePA')
+library('org.Hs.eg.db')
+library('Rmagic')
 
 
 # Load prefiltered and clustered Seurat Object
@@ -42,15 +51,20 @@ if(place == "local") {
 if(place == "local") {
   tissue_signatures <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Pseudo-bulk_tissue_specific_signature.rds") # uses practice data if local
 } else {
-  tissue_signatures <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/pseudo-bulk_DGE/Pseudo-bulk_tissue_specific_signature.rds") # uses whole dataset if wolfpack
+  tissue_signatures <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data/pseudo-bulk_DGE/Pseudo-bulk_tissue_specific_signature.rds") # uses whole dataset if wolfpack
 }
 
 # Calculate normalised, scaled counts across the whole experiment
+DEG_GOIs <- as.character(unique(unlist(lapply(tissue_signatures, `[[`, "Gene_name"))))
+DEG_GOIs <- DEG_GOIs[is.element(DEG_GOIs, rownames(data.frame(filtered_exp@assays$RNA@counts)))]
 filtered_exp <- SCTransform(filtered_exp, verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE, new.assay.name = "SCT_whole")
+filtered_exp_magic <- magic(filtered_exp, assay = "SCT_whole", genes = c(DEG_GOIs), t = "auto")
+filtered_exp_magic@active.assay <- "MAGIC_SCT_whole"
+filtered_exp_magic <- ScaleData(filtered_exp_magic)
 
 for(sig in names(tissue_signatures)) {
-  signature_GOIs <- as.character(tissue_signatures[[sig]]$Gene_name)[is.element(tissue_signatures[[sig]]$Gene_name, rownames(data.frame(filtered_exp@assays$SCT_whole@scale.data)))]
-  SCT_signature_GOIs <- data.frame(filtered_exp@assays$SCT_whole@scale.data)[signature_GOIs, ]
+  signature_GOIs <- as.character(tissue_signatures[[sig]]$Gene_name)[is.element(tissue_signatures[[sig]]$Gene_name, rownames(data.frame(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data)))]
+  SCT_signature_GOIs <- data.frame(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data)[signature_GOIs, ]
   unique(signature_GOIs == rownames(SCT_signature_GOIs))
   sig_tmp <- tissue_signatures[[sig]]
   rownames(sig_tmp) <- sig_tmp$Gene_name
