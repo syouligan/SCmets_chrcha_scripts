@@ -56,15 +56,15 @@ if(place == "local") {
 
 # Calculate normalised, scaled counts across the whole experiment
 DEG_GOIs <- as.character(unique(unlist(lapply(tissue_signatures, `[[`, "Gene_name"))))
-DEG_GOIs <- DEG_GOIs[is.element(DEG_GOIs, rownames(data.frame(filtered_exp@assays$RNA@counts)))]
+DEG_GOIs <- DEG_GOIs[is.element(DEG_GOIs, rownames(filtered_exp@assays$RNA@counts))]
 filtered_exp <- SCTransform(filtered_exp, verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE, new.assay.name = "SCT_whole")
 filtered_exp_magic <- magic(filtered_exp, assay = "SCT_whole", genes = c(DEG_GOIs), t = "auto")
 filtered_exp_magic@active.assay <- "MAGIC_SCT_whole"
 filtered_exp_magic <- ScaleData(filtered_exp_magic)
 
 for(sig in names(tissue_signatures)) {
-  signature_GOIs <- as.character(tissue_signatures[[sig]]$Gene_name)[is.element(tissue_signatures[[sig]]$Gene_name, rownames(data.frame(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data)))]
-  SCT_signature_GOIs <- data.frame(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data)[signature_GOIs, ]
+  signature_GOIs <- as.character(tissue_signatures[[sig]]$Gene_name)[is.element(tissue_signatures[[sig]]$Gene_name, rownames(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data))]
+  SCT_signature_GOIs <- Matrix::as.matrix(filtered_exp_magic@assays$MAGIC_SCT_whole@scale.data)[signature_GOIs, ]
   unique(signature_GOIs == rownames(SCT_signature_GOIs))
   sig_tmp <- tissue_signatures[[sig]]
   rownames(sig_tmp) <- sig_tmp$Gene_name
