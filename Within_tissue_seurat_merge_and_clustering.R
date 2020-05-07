@@ -57,8 +57,8 @@ if(place == "local") {
 # Calculate normalised, scaled counts across the whole experiment
 DEG_GOIs <- as.character(unique(unlist(lapply(tissue_signatures, `[[`, "Gene_name"))))
 DEG_GOIs <- DEG_GOIs[is.element(DEG_GOIs, rownames(filtered_exp@assays$RNA@counts))]
-filtered_exp <- SCTransform(filtered_exp, verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE, new.assay.name = "SCT_whole")
-filtered_exp_magic <- magic(filtered_exp, assay = "SCT_whole", genes = c(DEG_GOIs), t = "auto")
+filtered_exp_SCT <- SCTransform(filtered_exp, verbose = TRUE, vars.to.regress = c("Replicate", "Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE, new.assay.name = "SCT_whole")
+filtered_exp_magic <- magic(filtered_exp_SCT, assay = "SCT_whole", genes = c(DEG_GOIs), t = "auto")
 filtered_exp_magic@active.assay <- "MAGIC_SCT_whole"
 filtered_exp_magic <- ScaleData(filtered_exp_magic)
 
@@ -73,6 +73,25 @@ for(sig in names(tissue_signatures)) {
   filtered_exp[[paste0(sig, "_corr")]] <- unlist(lapply(correlation, `[[`, "estimate"))
   filtered_exp[[paste0(sig, "_p.adj")]] <- p.adjust(unlist(lapply(correlation, `[[`, "p.value")), method = "bonf")
 }
+
+# Save and remove large objects
+if(place == "local") {
+  saveRDS(filtered_exp_SCT, "Prefiltered_experiment_practice_seurat_integrated_whole_SCT.rds")
+} else if(place == "wolfpack") {
+  saveRDS(filtered_exp_SCT, "Prefiltered_experiment_practice_seurat_integrated_whole_SCT.rds")
+} else {
+  print("Not overwritten")
+}
+rm(filtered_exp_SCT)
+
+if(place == "local") {
+  saveRDS(filtered_exp_magic, "Prefiltered_experiment_practice_seurat_integrated_MAGIC_DGEGOI.rds")
+} else if(place == "wolfpack") {
+  saveRDS(filtered_exp_magic, "Prefiltered_experiment_practice_seurat_integrated_MAGIC_DGEGOI.rds")
+} else {
+  print("Not overwritten")
+}
+rm(filtered_exp_magic)
 
 # Identify clusters within each tissue
 # --------------------------------------------------------------------------
@@ -89,8 +108,8 @@ for (tissue in names(filtered_exp.list)) {
   tissue_exp.list <- SplitObject(tissue_exp, split.by = "Replicate") # split into individual samples
   
   # Perform SCT normalisation on each dataset individually
-  for (i in 1:length(tissue_exp.list)) {
-    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE)
+  for (i in names(tissue_exp.list)) {
+    tissue_exp.list[[i]] <- SCTransform(tissue_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = TRUE)
   }
   
   # Integrate datasets based on highly correlated features
