@@ -76,9 +76,18 @@ for(sig in names(tissue_signatures)) {
 
 # Save and remove large objects
 if(place == "local") {
+  saveRDS(filtered_exp, "Prefiltered_experiment_practice_seurat_integrated_w_SiteSpecSig.rds")
+} else if(place == "wolfpack") {
+  saveRDS(filtered_exp, "Prefiltered_experiment_all_seurat_integrated_w_SiteSpecSig.rds")
+} else {
+  print("Not overwritten")
+}
+
+# Save and remove large objects
+if(place == "local") {
   saveRDS(filtered_exp_SCT, "Prefiltered_experiment_practice_seurat_integrated_whole_SCT.rds")
 } else if(place == "wolfpack") {
-  saveRDS(filtered_exp_SCT, "Prefiltered_experiment_practice_seurat_integrated_whole_SCT.rds")
+  saveRDS(filtered_exp_SCT, "Prefiltered_experiment_all_seurat_integrated_whole_SCT.rds")
 } else {
   print("Not overwritten")
 }
@@ -87,7 +96,7 @@ rm(filtered_exp_SCT)
 if(place == "local") {
   saveRDS(filtered_exp_magic, "Prefiltered_experiment_practice_seurat_integrated_MAGIC_DGEGOI.rds")
 } else if(place == "wolfpack") {
-  saveRDS(filtered_exp_magic, "Prefiltered_experiment_practice_seurat_integrated_MAGIC_DGEGOI.rds")
+  saveRDS(filtered_exp_magic, "Prefiltered_experiment_all_seurat_integrated_MAGIC_DGEGOI.rds")
 } else {
   print("Not overwritten")
 }
