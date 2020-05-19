@@ -110,6 +110,14 @@ filtered_exp_magic <- ScaleData(filtered_exp_magic)
 Idents(filtered_exp_magic) <- "Tissue"
 levels(filtered_exp_magic) <- c("Primary", "LN", "Liver", "Lung")
 
+if(place == "local") {
+  saveRDS(filtered_exp_magic, "plots/Prefiltered_experiment_practice_seurat_integrated_MAGIC_HALLMARK.rds")
+} else if(place == "wolfpack") {
+  saveRDS(filtered_exp_magic, "plots/Prefiltered_experiment_all_seurat_integrated_MAGIC_HALLMARK.rds")
+} else {
+  print("Not overwritten")
+}
+
 for(pw in names(h_sig_list)) {
   hm <- DoHeatmap(object = filtered_exp_magic, features = h_sig_list[[pw]], slot = "scale.data", assay = "MAGIC_SCT_whole", group.bar = TRUE, group.colors = palette_OkabeIto[1:4], label = FALSE) +
     scale_fill_gradientn(colors = hcl.colors(n = 7, palette = "Berlin"), limits = c(-2.5, 2.5))
