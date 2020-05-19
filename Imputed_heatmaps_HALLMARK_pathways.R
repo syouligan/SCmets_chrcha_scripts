@@ -42,7 +42,7 @@ library('ggridges')
 if(place == "local") {
   filtered_exp <- readRDS("Prefiltered_experiment_practice_seurat_integrated_w_SiteSpecSig.rds") # uses practice data if local
 } else {
-  filtered_exp <- readRDS("Prefiltered_experiment_all_seurat_integrated_w_SiteSpecSig.rds") # uses whole dataset if wolfpack
+  filtered_exp <- readRDS("plots/Prefiltered_experiment_all_seurat_integrated_w_SiteSpecSig.rds") # uses whole dataset if wolfpack
   set.seed(100)
   options(future.globals.maxSize = 200000*1024^2)
 }
@@ -50,7 +50,7 @@ if(place == "local") {
 if(place == "local") {
   filtered_exp_SCT <- readRDS("Prefiltered_experiment_practice_seurat_integrated_whole_SCT.rds") # uses practice data if local
 } else {
-  filtered_exp_SCT <- readRDS("Prefiltered_experiment_all_seurat_integrated_whole_SCT.rds") # uses whole dataset if wolfpack
+  filtered_exp_SCT <- readRDS("plots/Prefiltered_experiment_all_seurat_integrated_whole_SCT.rds") # uses whole dataset if wolfpack
 }
 
 dir.create("plots")
