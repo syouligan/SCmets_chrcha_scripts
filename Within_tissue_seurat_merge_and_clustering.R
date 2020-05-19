@@ -69,7 +69,7 @@ for(sig in names(tissue_signatures)) {
   sig_tmp <- tissue_signatures[[sig]]
   rownames(sig_tmp) <- sig_tmp$Gene_name
   sig_tmp <- sig_tmp[rownames(SCT_signature_GOIs),]
-  correlation <- apply(SCT_signature_GOIs, 2, cor.test, sig_tmp$Signature)
+  correlation <- apply(SCT_signature_GOIs, 2, cor.test, sig_tmp$Signature, method = "spearman")
   filtered_exp[[paste0(sig, "_corr")]] <- unlist(lapply(correlation, `[[`, "estimate"))
   filtered_exp[[paste0(sig, "_p.adj")]] <- p.adjust(unlist(lapply(correlation, `[[`, "p.value")), method = "bonf")
 }
