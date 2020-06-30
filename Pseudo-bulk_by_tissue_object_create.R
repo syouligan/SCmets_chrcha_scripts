@@ -47,6 +47,15 @@ exprs <- exprs[ ,order(colnames(exprs))]
 
 # Save Pseudo-bulk dataset for working locally
 if(place == "local") {
+  saveRDS(summed, "pseudo-bulk_DGE/Pseudo-bulk_whole_experiment_practice_SCE_object.rds")
+} else if(place == "wolfpack") {
+  saveRDS(summed, "pseudo-bulk_DGE/Pseudo-bulk_whole_experiment_all_SCE_object.rds")
+} else {
+  print("Not overwritten")
+}
+
+# Save Pseudo-bulk dataset for working locally
+if(place == "local") {
   saveRDS(exprs, "pseudo-bulk_DGE/Pseudo-bulk_whole_experiment_practice.rds")
 } else if(place == "wolfpack") {
   saveRDS(exprs, "pseudo-bulk_DGE/Pseudo-bulk_whole_experiment_all.rds")

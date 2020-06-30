@@ -177,7 +177,16 @@ cluster6 <- zscores_GOI[zscores_GOI_annot$Cluster == 6, ]
 clusterList <- list("cluster1" = cluster1, "cluster2" = cluster2, "cluster3" = cluster3, "cluster4" = cluster4, "cluster5" = cluster5, "cluster6" = cluster6)
 cluster_eigengenes <- lapply(X = names(clusterList), function(x){ return(svd(clusterList[[x]])$v) })
 names(cluster_eigengenes) <- names(clusterList)
-  
+
+eigens <- c()
+for( i in names(cluster_eigengenes)){
+  test <- cluster_eigengenes[[i]][,1]
+  eigens <- cbind(eigens, test)
+}
+colnames(eigens) <- names(cluster_eigengenes)
+rownames(eigens) <- colnames(zscores_GOI)
+write.csv(eigens, "HC_cluster_eigengenes.csv")
+
 for(i in names(clusterList)) {
   melted <- gather(data.frame(clusterList[[i]]))
   # melted$Days <- c(rep(3, nrow(clusterList[[i]])*3), rep(14, nrow(clusterList[[i]])*3), rep(35, nrow(clusterList[[i]])*3))
@@ -246,7 +255,7 @@ for(i in names(clusterList)){
   # --------------------------------------------------------------------------
   
   # Perform GO enrichment analysis
-  BPenrich <- enrichGO(interesting[, "Ensembl"],
+  BPenrich <- enrichGO(interesting[interesting$p.adj < 0.05, "Ensembl"],
                        OrgDb = org.Hs.eg.db,
                        keyType = "ENSEMBL",
                        ont = "BP",
@@ -259,7 +268,7 @@ for(i in names(clusterList)){
   GOBP_GOI <- as.data.frame(BPenrich@result)
   write.csv(GOBP_GOI, paste0("markers/HC_", i,"/GOBP_markers_all_HC_", i, ".csv"))
   
-  MFenrich <- enrichGO(interesting[, "Ensembl"],
+  MFenrich <- enrichGO(interesting[interesting$p.adj < 0.05, "Ensembl"],
                        OrgDb = org.Hs.eg.db,
                        keyType = "ENSEMBL",
                        ont = "MF",
@@ -272,7 +281,7 @@ for(i in names(clusterList)){
   GOMF_GOI <- as.data.frame(MFenrich@result)
   write.csv(GOMF_GOI, paste0("markers/HC_", i,"/GOMF_markers_all_HC_", i, ".csv"))
   
-  CCenrich <- enrichGO(interesting[, "Ensembl"],
+  CCenrich <- enrichGO(interesting[interesting$p.adj < 0.05, "Ensembl"],
                        OrgDb = org.Hs.eg.db,
                        keyType = "ENSEMBL",
                        ont = "CC",
@@ -286,7 +295,7 @@ for(i in names(clusterList)){
   write.csv(GOCC_GOI, paste0("markers/HC_", i,"/GOCC_markers_all_HC_", i, ".csv"))
   
   # Perform HALLMARK enrichment analysis
-  HallmarkEnrich <- enricher(gene = interesting[, "GeneSymbol"], 
+  HallmarkEnrich <- enricher(gene = interesting[interesting$p.adj < 0.05, "GeneSymbol"], 
                              TERM2GENE = h_t2g,
                              pvalueCutoff = 1,
                              qvalueCutoff = 1,
@@ -298,7 +307,7 @@ for(i in names(clusterList)){
   write.csv(Hallmark_GOI, paste0("markers/HC_", i,"/HALLMARK_markers_all_HC_", i, ".csv"))
 
   # Perform Metabolic_pathways enrichment analysis
-  Metabolic_pathwaysEnrich <- enricher(gene = interesting[, "GeneSymbol"], 
+  Metabolic_pathwaysEnrich <- enricher(gene = interesting[interesting$p.adj < 0.05, "GeneSymbol"], 
                                        TERM2GENE = metabolic_pathways,
                                        pvalueCutoff = 1,
                                        qvalueCutoff = 1,
@@ -310,7 +319,7 @@ for(i in names(clusterList)){
   write.csv(Metabolic_pathways_GOI, paste0("markers/HC_", i,"/Metabolic_pathways_all_HC_", i, ".csv"))
     
   # Perform KEGG enrichment analysis
-  KEGGenrichsig <- enrichKEGG(interesting[, "EntrezID"],
+  KEGGenrichsig <- enrichKEGG(interesting[interesting$p.adj < 0.05, "EntrezID"],
                               organism = "hsa",
                               keyType = "kegg",
                               pvalueCutoff = 0.05,
@@ -319,7 +328,7 @@ for(i in names(clusterList)){
   write.csv(KEGGenrichsig, paste0("markers/HC_", i,"/KEGG_markers_all_HC_", i, ".csv"))
   
   # Perform REACTOME enrichment analysis
-  REACTOMEenrichsig <- enrichPathway(interesting[, "EntrezID"],
+  REACTOMEenrichsig <- enrichPathway(interesting[interesting$p.adj < 0.05, "EntrezID"],
                                      organism = "human",
                                      pvalueCutoff = 0.05,
                                      pAdjustMethod = "bonferroni",

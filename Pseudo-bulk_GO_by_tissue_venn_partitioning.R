@@ -6,7 +6,7 @@
 
 # Working directory
 if(dir.exists("/Users/mac/cloudstor/")) {
-  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/practice_all_data") # Uses practice data (5% of cells from each sample) if running locally
+  setwd("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data") # Uses practice data (5% of cells from each sample) if running locally
   place <- "local"
 } else {
   setwd("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/prefiltering/all_data")
@@ -27,11 +27,11 @@ library('msigdbr')
 
 # Make list of differentially expressed genes
 liver_primary <- read.csv("pseudo-bulk_DGE/Liver_Primary_DEG_0LFC.csv", header = TRUE)
-liver_primary_DGE <- liver_primary[liver_primary$adj.P.Val < 0.05 & liver_primary$logFC > 0, ]
+liver_primary_DGE <- liver_primary[liver_primary$adj.P.Val < 0.05, ]
 ln_primary <- read.csv("pseudo-bulk_DGE/LN_Primary_DEG_0LFC.csv", header = TRUE)
-ln_primary_DGE <- ln_primary[ln_primary$adj.P.Val < 0.05 & ln_primary$logFC > 0, ]
+ln_primary_DGE <- ln_primary[ln_primary$adj.P.Val < 0.05, ]
 lung_primary <- read.csv("pseudo-bulk_DGE/Lung_Primary_DEG_0LFC.csv", header = TRUE)
-lung_primary_DGE <- lung_primary[lung_primary$adj.P.Val < 0.05 & lung_primary$logFC > 0, ]
+lung_primary_DGE <- lung_primary[lung_primary$adj.P.Val < 0.05, ]
 DGE_list <- list("Liver" = liver_primary_DGE$GeneSymbol, "LN" = ln_primary_DGE$GeneSymbol, "Lung" = lung_primary_DGE$GeneSymbol)
 
 # Venn diagram overlap DEGs between metastatic sites and tissues

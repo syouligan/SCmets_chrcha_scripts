@@ -44,16 +44,11 @@ rowData_summed <- read.csv("Pseudo-bulk_rowData_all.csv", header = TRUE, row.nam
 
 # Load DGE data
 # --------------------------------------------------------------------------
-# Make list of top 100 differentially expressed genes
+# Make list of differentially expressed genes
 liver_primary <- read.csv("Liver_Primary_DEG_0LFC.csv", header = TRUE)
 liver_primary <- liver_primary[liver_primary$adj.P.Val < 0.05, ]
 liver_primary <- liver_primary[order(liver_primary$t),]
 liver_primary <- as.character(liver_primary[, "X"])
-
-ln_primary <- read.csv("LN_Primary_DEG_0LFC.csv", header = TRUE)
-ln_primary <- ln_primary[ln_primary$adj.P.Val < 0.05, ]
-ln_primary <- ln_primary[order(ln_primary$t),]
-ln_primary <- as.character(ln_primary[, "X"])
 
 lung_primary <- read.csv("Lung_Primary_DEG_0LFC.csv", header = TRUE)
 lung_primary <- lung_primary[lung_primary$adj.P.Val < 0.05, ]
@@ -65,23 +60,12 @@ liver_lung <- liver_lung[liver_lung$adj.P.Val < 0.05, ]
 liver_lung <- liver_lung[order(liver_lung$t),]
 liver_lung <- as.character(liver_lung[, "X"])
 
-liver_ln <- read.csv("Liver_LN_DEG_0LFC.csv", header = TRUE)
-liver_ln <- liver_ln[liver_ln$adj.P.Val < 0.05, ]
-liver_ln <- liver_ln[order(liver_ln$t),]
-liver_ln <- as.character(liver_ln[, "X"])
+total_DGE <- as.character(unique(c(liver_primary, lung_primary, liver_lung)))
+total_Liver <- as.character(unique(c(liver_primary, liver_lung)))
+total_Lung <- as.character(unique(c(lung_primary, liver_lung)))
+total_Primary <- as.character(unique(c(liver_primary, lung_primary)))
 
-ln_lung <- read.csv("LN_Lung_DEG_0LFC.csv", header = TRUE)
-ln_lung <- ln_lung[ln_lung$adj.P.Val < 0.05, ]
-ln_lung <- ln_lung[order(ln_lung$t),]
-ln_lung <- as.character(ln_lung[, "X"])
-
-total_DGE <- as.character(unique(c(liver_primary, ln_primary, lung_primary, liver_lung, ln_lung, liver_ln)))
-total_Liver <- as.character(unique(c(liver_primary, liver_lung, liver_ln)))
-total_LN <- as.character(unique(c(ln_primary, ln_lung, liver_ln)))
-total_Lung <- as.character(unique(c(lung_primary, liver_lung, ln_lung)))
-total_Primary <- as.character(unique(c(liver_primary, ln_primary, lung_primary)))
-
-DGE_list <- list("Total_Liver" = total_Liver, "Total_Lung" = total_Lung, "Total_Primary" = total_Primary, "Total_LN" = total_LN)
+DGE_list <- list("Total_Liver" = total_Liver, "Total_Lung" = total_Lung, "Total_Primary" = total_Primary)
 
 # Make heatmap of DEGs between tissues and primary tumors
 # --------------------------------------------------------------------------
@@ -152,8 +136,11 @@ names(tissue_signatures) <- paste0(names(DGE_list), "_sig")
 for(i in names(tissue_signatures)) {
   tissue_signatures[[i]] %>%
     ggplot(aes(x = Gene_name, y = Signature)) +
-    geom_point() +
+    geom_point(aes(color = Signature), alpha = 0.3) +
+    scale_color_gradientn(colors = hcl.colors(n = 7, palette = "Blue-Red 2")) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
     theme_classic() +
+    coord_flip() +
     ggsave(paste0("Pseudo-bulk_tissue_specific_", i, "_dotplot.pdf"), useDingbats = FALSE)
 }
 
