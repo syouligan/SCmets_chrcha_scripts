@@ -138,12 +138,21 @@ for(i in c("phate")) {
   ggsave(paste0("PHATE_clusters_", i, ".png"), plot = gridit, device = "png")
 }
 
-write.csv(t(filtered_exp.integrated@assays$integrated@scale.data), "Prefiltered_experiment_practice_seurat_integrated_SCT.csv")
-write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_practice_seurat_integrated_LogNorm.csv")
-write.csv(filtered_exp.integrated@meta.data, "Prefiltered_experiment_practice_seurat_integrated_colData.csv")
-write.csv(filtered_exp.integrated@assays$RNA@meta.features, "Prefiltered_experiment_practice_seurat_integrated_rowData.csv")
-write.csv(Embeddings(filtered_exp.integrated, "pca"), "Prefiltered_experiment_practice_seurat_integrated_pca_embeddings.csv")
-write.csv(Embeddings(filtered_exp.integrated, "umap"), "Prefiltered_experiment_practice_seurat_integrated_umap_embeddings.csv")
+if(place == "local" & exists("phate.out")) {
+  write.csv(t(filtered_exp.integrated@assays$integrated@scale.data), "Prefiltered_experiment_practice_seurat_integrated_SCT.csv")
+  write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_practice_seurat_integrated_LogNorm.csv")
+  write.csv(filtered_exp.integrated@meta.data, "Prefiltered_experiment_practice_seurat_integrated_colData.csv")
+  write.csv(filtered_exp.integrated@assays$RNA@meta.features, "Prefiltered_experiment_practice_seurat_integrated_rowData.csv")
+  write.csv(Embeddings(filtered_exp.integrated, "pca"), "Prefiltered_experiment_practice_seurat_integrated_pca_embeddings.csv")
+  write.csv(Embeddings(filtered_exp.integrated, "umap"), "Prefiltered_experiment_practice_seurat_integrated_umap_embeddings.csv")
+} else {
+  write.csv(t(filtered_exp.integrated@assays$integrated@scale.data), "Prefiltered_experiment_all_seurat_integrated_SCT.csv")
+  write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_all_seurat_integrated_LogNorm.csv")
+  write.csv(filtered_exp.integrated@meta.data, "Prefiltered_experiment_all_seurat_integrated_colData.csv")
+  write.csv(filtered_exp.integrated@assays$RNA@meta.features, "Prefiltered_experiment_all_seurat_integrated_rowData.csv")
+  write.csv(Embeddings(filtered_exp.integrated, "pca"), "Prefiltered_experiment_all_seurat_integrated_pca_embeddings.csv")
+  write.csv(Embeddings(filtered_exp.integrated, "umap"), "Prefiltered_experiment_all_seurat_integrated_umap_embeddings.csv")
+}
 
 # Save seurat objects
 # --------------------------------------------------------------------------
