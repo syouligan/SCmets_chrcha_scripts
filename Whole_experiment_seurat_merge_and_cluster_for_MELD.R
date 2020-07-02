@@ -71,7 +71,7 @@ filtered_exp_seurat <- AddModuleScore(object = filtered_exp_seurat, features = d
 # --------------------------------------------------------------------------
 
 filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Replicate") # split into individual samples
-all_features <- rownames(filtered_exp_seurat@assays$RNA@meta.features)
+all_features <- rownames(rowMetaData)
 
 # Perform SCT normalisation on each dataset individually
 for (i in 1:length(filtered_exp.list)) {
