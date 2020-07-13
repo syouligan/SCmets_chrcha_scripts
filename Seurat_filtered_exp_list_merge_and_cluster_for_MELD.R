@@ -39,7 +39,7 @@ if(place == "local") {
   all_features <- readRDS("/Users/mac/cloudstor/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/practice_all_data/All_features.rds") # uses practice data if local
 } else {
   filtered_exp.list <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/Prefiltered_QC_experiment_all_filtered_exp_list.rds") # uses whole dataset if wolfpack
-  all_features <- c(readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/All_features.rds")) # uses whole dataset if wolfpack
+  all_features <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/All_features.rds") # uses whole dataset if wolfpack
 }
 
 # Normalise transform counts within each experiment. Note: will not overwrite if already exists.
