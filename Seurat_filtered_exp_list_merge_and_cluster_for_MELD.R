@@ -53,9 +53,9 @@ all_features <- as.character(all_features[,,drop = TRUE])
 # Integrate datasets based on highly correlated features
 filtered_exp.features <- SelectIntegrationFeatures(object.list = filtered_exp.list, nfeatures = 5000)
 filtered_exp.list <- PrepSCTIntegration(object.list = filtered_exp.list, verbose = TRUE, anchor.features = filtered_exp.features)
-# filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
+filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
 reference_datasets <- which(names(filtered_exp.list) == "3")
-filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "cca", reference = reference_datasets)
+filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "rpca", reference = reference_datasets)
 filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE, features.to.integrate = all_features)
 
 if(place == "local" & exists("phate.out")) {
