@@ -41,7 +41,7 @@ if(place == "local") {
   filtered_exp.list <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/Prefiltered_QC_experiment_all_filtered_exp_list.rds") # uses whole dataset if wolfpack
   all_features <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/All_features.rds") # uses whole dataset if wolfpack
   set.seed(100)
-  options(future.globals.maxSize = 500000*1024^2)
+  options(future.globals.maxSize = 200000*1024^2)
   
 }
 
