@@ -82,7 +82,7 @@ if(place == "local") {
 rm(filtered_exp.integrated)
 rm()
 filtered_exp.integrated.ln <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "LogNormalize", verbose = TRUE)
-if(place == "local" & exists("phate.out")) {
+if(place == "local") {
   write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_practice_seurat_integrated_LogNorm.csv")
 } else {
   write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_all_seurat_integrated_LogNorm.csv")

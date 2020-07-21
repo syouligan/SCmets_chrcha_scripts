@@ -49,6 +49,16 @@ filtered_exp_seurat <- as.Seurat(filtered_exp_sce, counts = "counts", data = NUL
 # Add Entrez IDs
 rowData(filtered_exp_sce)$EntrezID <- mapIds(org.Hs.eg.db, keys=rowData(filtered_exp_sce)$Ensembl, column="ENTREZID", keytype="ENSEMBL", multiVals="first")
 rowMetaData <- data.frame(rowData(filtered_exp_sce))
+rowMetaData$Seurat_IDs <- rownames(filtered_exp_seurat)
+
+if(place == "local") {
+  saveRDS(rowMetaData, "Feature_metadata.rds")
+} else if(place == "wolfpack") {
+  saveRDS(rowMetaData, "Feature_metadata.rds")
+} else {
+  print("Not saved")
+}
+
 filtered_exp_seurat <- AddMetaData(filtered_exp_seurat, rowMetaData)
 
 # Add cell cycle
@@ -90,3 +100,4 @@ if(place == "local") {
 } else {
   print("Not saved")
 }
+
