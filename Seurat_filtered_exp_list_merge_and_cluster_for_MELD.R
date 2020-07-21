@@ -58,7 +58,7 @@ reference_datasets <- which(names(filtered_exp.list) == "3")
 filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "rpca", reference = reference_datasets)
 filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 
-if(place == "local" & exists("phate.out")) {
+if(place == "local") {
   write.csv(t(filtered_exp.integrated@assays$integrated@scale.data), "Prefiltered_experiment_practice_seurat_integrated_SCT.csv")
   write.csv(filtered_exp.integrated@meta.data, "Prefiltered_experiment_practice_seurat_integrated_colData.csv")
 } else {
