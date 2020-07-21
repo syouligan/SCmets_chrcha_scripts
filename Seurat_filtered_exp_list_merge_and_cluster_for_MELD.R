@@ -41,7 +41,7 @@ if(place == "local") {
   filtered_exp.list <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/Prefiltered_QC_experiment_all_filtered_exp_list.rds") # uses whole dataset if wolfpack
   all_features <- readRDS("/share/ScratchGeneral/scoyou/sarah_projects/SCMDA231mets_chrcha/project_results/seurat/all_data/All_features.rds") # uses whole dataset if wolfpack
   set.seed(100)
-  options(future.globals.maxSize = 200000*1024^2)
+  options(future.globals.maxSize = 1000000*1024^2)
   
 }
 
@@ -56,7 +56,7 @@ filtered_exp.list <- PrepSCTIntegration(object.list = filtered_exp.list, verbose
 filtered_exp.list <- lapply(X = filtered_exp.list, FUN = RunPCA, verbose = TRUE, features = filtered_exp.features) # Perform PCA on each object individually (needed for rpca)
 reference_datasets <- which(names(filtered_exp.list) == "3")
 filtered_exp.anchors <- FindIntegrationAnchors(object.list = filtered_exp.list, normalization.method = "SCT", anchor.features = filtered_exp.features, verbose = TRUE, reduction = "rpca", reference = reference_datasets)
-filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE, features.to.integrate = all_features)
+filtered_exp.integrated <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "SCT", verbose = TRUE)
 
 if(place == "local" & exists("phate.out")) {
   write.csv(t(filtered_exp.integrated@assays$integrated@scale.data), "Prefiltered_experiment_practice_seurat_integrated_SCT.csv")
@@ -81,7 +81,7 @@ if(place == "local") {
 # --------------------------------------------------------------------------
 rm(filtered_exp.integrated)
 rm()
-filtered_exp.integrated.ln <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "LogNormalize", verbose = TRUE, features.to.integrate = all_features)
+filtered_exp.integrated.ln <- IntegrateData(anchorset = filtered_exp.anchors, normalization.method = "LogNormalize", verbose = TRUE)
 if(place == "local" & exists("phate.out")) {
   write.csv(t(filtered_exp.integrated.ln@assays$integrated@data), "Prefiltered_experiment_practice_seurat_integrated_LogNorm.csv")
 } else {
