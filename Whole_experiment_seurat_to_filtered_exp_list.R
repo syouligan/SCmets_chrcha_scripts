@@ -81,11 +81,11 @@ filtered_exp_seurat <- AddModuleScore(object = filtered_exp_seurat, features = d
 # --------------------------------------------------------------------------
 
 filtered_exp.list <- SplitObject(filtered_exp_seurat, split.by = "Replicate") # split into individual samples
-all_features <- data.frame(rownames(x = filtered_exp_seurat))
+# all_features <- data.frame(rownames(x = filtered_exp_seurat))
 
 # Perform SCT normalisation on each dataset individually
 for (i in 1:length(filtered_exp.list)) {
-  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score", "digest_stress1"), variable.features.n = 5000, return.only.var.genes = FALSE)
+  filtered_exp.list[[i]] <- SCTransform(filtered_exp.list[[i]], verbose = TRUE, vars.to.regress = c("Lib_size", "S.Score", "G2M.Score"), variable.features.n = 5000, return.only.var.genes = FALSE)
 }
 
 # Save seurat objects
@@ -93,10 +93,8 @@ for (i in 1:length(filtered_exp.list)) {
 
 if(place == "local") {
   saveRDS(filtered_exp.list, "Prefiltered_QC_experiment_practice_filtered_exp_list.rds")
-  saveRDS(all_features, "All_features.rds")
 } else if(place == "wolfpack") {
   saveRDS(filtered_exp.list, "Prefiltered_QC_experiment_all_filtered_exp_list.rds")
-  saveRDS(all_features, "All_features.rds")
 } else {
   print("Not saved")
 }
