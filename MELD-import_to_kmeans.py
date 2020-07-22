@@ -91,7 +91,7 @@ G = gt.Graph(corrected_SCT, knn=10, decay=40, n_pca=100, use_pygsp=True, n_jobs=
 # In[7]:
 
 
-pickle.dump(G, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_GRAPH.pkl'), "wb"))
+pickle.dump(G, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_GRAPH.pkl'), "wb"), protocol=4)
 
 
 # Use Graph to calculate PHATE embeddings in 2 dimensions
@@ -106,7 +106,7 @@ data_phate = phate_op.fit_transform(G.kernel)
 # In[9]:
 
 
-pickle.dump(data_phate, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_PHATE.pkl'), "wb"))
+pickle.dump(data_phate, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_PHATE.pkl'), "wb"), protocol=4)
 
 
 # Add phate embeddings to metadata object
@@ -131,7 +131,7 @@ data_magic = magic_op.fit_transform(corrected_logNorm, graph=G)
 # In[12]:
 
 
-pickle.dump(data_magic, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MAGIC.pkl'), "wb" ))
+pickle.dump(data_magic, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MAGIC.pkl'), "wb" ), protocol=4)
 
 data_magic.to_csv(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MAGIC_counts.csv'), index = True, header = True)
 
@@ -233,7 +233,7 @@ for k in range(3, 20):
 # In[18]:
 
 
-pickle.dump(metadata, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MELD_metadata_Kmeans.pkl'), "wb"))
+pickle.dump(metadata, open(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MELD_metadata_Kmeans.pkl'), "wb"), protocol=4)
 
 metadata.to_csv(os.path.join(outdir, 'Prefiltered_experiment_' + str(dataset) + '_seurat_integrated_MELD_metadata_Kmeans.csv'), index = True, header = True)
 
